@@ -11,7 +11,7 @@
 
 ## Project Ideas List
 
-<u>Jeremy Troy Suchanski</u>
+<ins>Jeremy Troy Suchanski</ins>
 
 1. Meal Planner app
 2. Calendar app
