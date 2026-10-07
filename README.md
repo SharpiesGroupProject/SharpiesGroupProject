@@ -14,8 +14,8 @@
 <ins>Jeremy Troy Suchanski</ins>
 1. Meal Planner: A meal planning app that creates a list of needed groceries for the planned meals<br>
 **Details on key features, functionalities, and target users:**<br>
-• **Key Features** would be a page for planning meals, a page for recipes, a page for a grocery list
-• **Key Functionalities** would be you could add, remove, and update meals, recipes and the grocery list page. When you put a meal on the plan the items for the recipe would be automatically added to the grocery list with a connection to the meal it came from. That will differentiate it from items you added to the grocery list separately on your own.
+• **Key Features** would be a page for planning meals, a page for recipes, a page for a grocery list<br>
+• **Key Functionalities** would be you could add, remove, and update meals, recipes and the grocery list page. When you put a meal on the plan the items for the recipe would be automatically added to the grocery list with a connection to the meal it came from. That will differentiate it from items you added to the grocery list separately on your own.<br>
 • **Target Users** would be families, but it would also be targeting anyone who plans for meals and shops for their food.
 2. Calendar: A calendar app that includes goal setting integration
 3. List: A list app that is setup so you can make and save different lists under different categories
