@@ -33,11 +33,11 @@
 • **Key Functionalities** would be you could add, remove, and update note pages. The lists would also have options for adding images, highlighting, and drawing free hand.<br>
 • **Target Users** would be anyone who takes notes that they want to keep.
 
-<ins>Tristan Zatyln</ins>
-1. class scheduler app: gets classes from BYUI and lets user select classes and see them on a calendar
-2.
-3.
-4.
+<u>Tristan Zatylny</u>
+1. Class Scheduler App: gets classes from BYUI and lets user select classes and see them on a calendar
+    - **Key Features**: calendar interface, selecting classes by checking boxes, notifying about prerequisites, potentially filtering based on grad plan
+    - **Key Functionalities**: pulling classes from BYU-I, database storage, deserializing class info, caching class data
+    - **Target Users**: all BYU-I students
 
 <ins>Seth Taylor</ins>
 1. Garage blog app: community help for car repairs on campus
