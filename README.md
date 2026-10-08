@@ -33,7 +33,7 @@
 • **Key Functionalities** would be you could add, remove, and update note pages. The lists would also have options for adding images, highlighting, and drawing free hand.<br>
 • **Target Users** would be anyone who takes notes that they want to keep.
 
-<u>Tristan Zatylny</u>
+<ins>Tristan Zatylny</ins>
 1. Class Scheduler App: gets classes from BYUI and lets user select classes and see them on a calendar
     - **Key Features**: calendar interface, selecting classes by checking boxes, notifying about prerequisites, potentially filtering based on grad plan
     - **Key Functionalities**: pulling classes from BYU-I, database storage, deserializing class info, caching class data
