@@ -40,10 +40,14 @@
 4.
 
 <ins>Seth Taylor</ins>
-1. garage blog app: community help for car repairs on campus
-2.
-3.
-4.
+1. Garage blog app: community help for car repairs on campus
+    •Key Features would be a main page with a feed of repair posts, a page for creating a post, and a page for viewing a single post with its comments
+    •Key Functionalities would be you could add, remove, and update posts and comments. Each post would include the car’s make, model, and year so users can filter the feed to find posts         about  cars like theirs. Posts could also be marked as solved once the problem is fixed.
+    •Target Users would be college students who work on their own cars, but it would also be targeting anyone on campus who needs help with a car problem or wants to help others.
+2.CarCare: A car maintenance tracker that reminds you when service is due
+    • Key Features would be a page listing your vehicles, a page for each vehicle’s maintenance history, and a page for upcoming maintenance
+    • Key Functionalities would be you could add, remove, and update vehicles and maintenance records. When you log a service like an oil change with the date and mileage, the next due             date would automatically be added to the upcoming maintenance page.
+    • Target Users would be anyone who owns a car, especially students and families who want to keep track of their vehicles’ upkeep without a mechanic reminding them.
 
 <ins>Drew Breneman</ins>
 1. scrapes Facebook market listings - to speed up access
