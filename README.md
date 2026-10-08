@@ -59,10 +59,21 @@
 
 <ins>Reece Beaumont-Thomas</ins>
 1. Exercise Planner: app to plan and track workouts
+    This would focus on both gym goers and people that exercise at home. The main features would be creating a workout plan, adding specific exercise to the plan, keeping track of sets and
+Key Features:
+    This would focus on both gym goers and people that exercise at home. The main features would be creating a workout plan, adding specific exercise to the plan, keeping track of sets and reps.
+    The app could include a calendar for further planning. Another feature could be adding goals and a goal tracker. 
+Key Functionalities:
+    Adding, editing and removing of exercises to a plan and the calendar. Creating, editing and removing a goal. Being able to add what exercise equipment you have access to. 
+Target Users:
+    The app would be targeted at both casual exercisers that workout at home and those that are more serious who gym often. 
 2. Reading List: app to track books you're reading and have read
-3.
-4.
-
+Key Features:
+    Creating list such as book to read, books currently reading and books read to keep track of for the user. Being able to add custom collections. Being able to review and rate books. 
+Key Functionalities:
+    Adding, removing and updating the default and customs collections. Creating, editing and deleting of custom collections. CRUD for reviews and ratings. 
+Target Users:
+    Book readers. 
 ## Project Summary
 
 To be determined.
