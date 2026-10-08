@@ -12,7 +12,7 @@
 ## Project Ideas List
 
 <ins>Jeremy Troy Suchanski</ins>
-1. $${\color{magenta}Meal Planner}$$: A meal planning app that creates a list of needed groceries for the planned meals<br>
+1. **$${\color{magenta}Meal Planner}$$:** A meal planning app that creates a list of needed groceries for the planned meals<br>
 **Details on key features, functionalities, and target users:**<br>
 • **Key Features** would be a page for planning meals, a page for recipes, and a page for a grocery list<br>
 • **Key Functionalities** would be you could add, remove, and update meals, recipes and the grocery list page. When you put a meal on the plan the items for the recipe would be automatically added to the grocery list with a connection to the meal it came from. That will differentiate it from items you added to the grocery list separately on your own.<br>
