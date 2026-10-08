@@ -40,7 +40,7 @@
     - **Target Users**: all BYU-I students
 
 <ins>Seth Taylor</ins>
-1. $${\color{magenta}Garage\ blog\ App}}$$: community help for car repairs on campus
+1. $${\color{magenta}\mathbf{Garage\ blog\ App}}$$: community help for car repairs on campus
     - **Key Features**: would be a main page with a feed of repair posts, a page for creating a post, and a page for viewing a single post with its comments
     - **Key Functionalities**: would be you could add, remove, and update posts and comments. Each post would include the car’s make, model, and year so users can filter the feed to find posts         about  cars like theirs. Posts could also be marked as solved once the problem is fixed.
     - **Target Users**: would be college students who work on their own cars, but it would also be targeting anyone on campus who needs help with a car problem or wants to help others.
@@ -56,7 +56,7 @@
 4.
 
 <ins>Milton Chino Mamani</ins>
-1. $${\color{magenta}Study tracker}$$: place notes about classes we are taking - organize note, flashcards, links to resources
+1. $${\color{magenta}\mathbf{Study\ tracker}}$$: place notes about classes we are taking - organize note, flashcards, links to resources
 2.
 3.
 4.
