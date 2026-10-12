@@ -57,9 +57,12 @@
 
 <ins>Milton Chino Mamani</ins>
 1. $${\color{magenta}\mathbf{Study\ tracker}}$$: place notes about classes we are taking - organize note, flashcards, links to resources
-2.
-3.
-4.
+- **Key Features**:
+    Class-specific note organization, flashcard study sets, resource links, progress tracking, and search/filter tools for study materials.
+- **Key Functionalities**:
+    Create and organize class categories, add/edit notes, build flashcards, save useful links/resources, and track study progress over time.
+- **Target Users**:
+    College students, especially students managing multiple classes who need a centralized place to store notes, study aids, and academic resources.
 
 <ins>Reece Beaumont-Thomas</ins>
 1. $${\color{magenta}\mathbf{Exercise\ Planner}}$$: app to plan and track workouts
