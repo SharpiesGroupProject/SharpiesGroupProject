@@ -63,6 +63,14 @@
     Create and organize class categories, add/edit notes, build flashcards, save useful links/resources, and track study progress over time.
 - **Target Users**:
     College students, especially students managing multiple classes who need a centralized place to store notes, study aids, and academic resources.
+    
+3. $${\color{cyan}\mathbf{Study\ Group\ Planner}}$$: app to organize study groups, meeting times, and shared materials
+- **Key Features**:
+    Group creation, scheduling support, shared notes and files, task tracking, and communication tools for study sessions.
+- **Key Functionalities**:
+    Create study groups, schedule meetings, share notes and documents, assign tasks, and track progress for group projects or exam prep.
+- **Target Users**:
+    College students who collaborate on assignments, prepare for exams, or want a better way to organize study groups.
 
 <ins>Reece Beaumont-Thomas</ins>
 1. $${\color{magenta}\mathbf{Exercise\ Planner}}$$: app to plan and track workouts
