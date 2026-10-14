@@ -1,3 +1,6 @@
+Project requirements - this can be deleted later. 
+https://byui-cse.github.io/cse325-course/unit07/group-project-description.html
+
 # Proposal document
 
 Title: Provide a title for the project.
