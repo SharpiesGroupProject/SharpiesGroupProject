@@ -1,5 +1,10 @@
 # Sharpies Group Project
 
+## Project Summary
+
+[Project Proposal Page](project_proposal.md)
+Meal Planner app.
+
 ## Team Members
 
 - Jeremy Suchanski
@@ -89,6 +94,3 @@
     Adding, removing and updating the default and customs collections. Creating, editing and deleting of custom collections. CRUD for reviews and ratings. 
 - **Target Users**:
     Book readers. 
-## Project Summary
-
-To be determined.
