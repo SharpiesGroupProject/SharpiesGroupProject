@@ -182,6 +182,7 @@ The project will focus on providing the essential functionality needed to plan m
 •	Support use on desktop and mobile devices through a responsive interface.<br>
 ### Features Excluded from the Project
 The following features will not be included in the initial version of the application:<br>
+
 •	User Accounts: Users will not be able to create accounts and log in.<br>
 •	Rate Difficulty of Recipes: The application will not allow you to rate the difficulty of recipes.<br>
 •	Dietary Restrictions: The application will not provide a way to include dietary restrictions.<br>
@@ -189,14 +190,15 @@ The following features will not be included in the initial version of the applic
 •	Recipe Import from External Websites: Users will enter and maintain their own recipes rather than importing recipes directly from websites.<br>
 •	Pantry Inventory Management: The application will not track the quantities of ingredients users currently have in their homes.<br>
 •	AI-Generated Meal Recommendations: The application will not automatically recommend meals using artificial intelligence.<br>
+
 These features may be considered for future development but are outside the scope of the initial project.<br>
 ## Functional Requirements
 The purpose of functional requirements are to describe the specific actions and operations that the Meal Planner application must perform.
 Each functional requirement is assigned a unique identifier to simplify organization, development, testing, and tracking in Jira.<br>
 ### Meal Planning Requirements
 #### FR-1: View Meal Plans
-The system shall allow users to view their planned meals organized by date.<br>
-FR-2: Add Planned Meals
+The system shall allow users to view their planned meals organized by date.
+#### FR-2: Add Planned Meals
 The system shall allow users to add a meal to a selected date in their meal plan.
 FR-3: Edit Planned Meals
 The system shall allow users to modify existing planned meals, including changing the associated recipe or scheduled date.
