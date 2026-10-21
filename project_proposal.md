@@ -82,29 +82,28 @@ Planning meals and coordinating grocery shopping is a recurring weekly challenge
 ### App Features
 
 #### 1. Authentication & User Accounts
-- The system shall allow new users to register a personal account with a unique email and secure password.
-- The system shall provide secure user authentication (login, logout, and session state).
-- The system shall enforce data isolation, ensuring users can only access and modify their own recipes, meal plans, and grocery items.
+- Users will register a personal account with a unique email and secure password.
+- The system will provide secure user authentication (login, logout, and session state).
+- The system will enforce data isolation, ensuring users can only access and modify their own recipes, meal plans, and grocery items.
 
 #### 2. Recipe Management (CRUD)
-- The system shall allow users to create new recipes with title, description, category/tags, prep and cook times, servings, ingredients (quantity, unit, name), and cooking instructions.
-- The system shall display detailed recipe views with formatted ingredient lists and directions.
-- The system shall provide search and filtering capabilities by recipe name and category tags.
-- The system shall allow users to edit and update existing recipe details and ingredient lists.
-- The system shall allow users to delete recipes from their library.
+- Users will create new recipes with title, description, category/tags, prep and cook times, servings, ingredients (quantity, unit, name), and cooking instructions.
+- The system will display detailed recipe views with formatted ingredient lists and directions.
+- The system will provide search and filtering capabilities by recipe name and category tags.
+- Users will edit and update existing recipe details and ingredient lists.
+- Users will delete recipes from their library.
 
 #### 3. Weekly Meal Planner
-- The system shall display an interactive 7-day calendar view (Monday through Sunday) organized by meal categories (Breakfast, Lunch, Dinner).
-- The system shall allow users to assign recipes from their library to specific meal slots on any given day.
-- The system shall allow users to remove, replace, or reschedule meals on the calendar.
-- The system shall support date navigation to view and plan across current, past, and upcoming weeks.
+- The system will display an interactive 7-day calendar view (Monday through Sunday) organized by meal categories (Breakfast, Lunch, Dinner).
+- Users will assign recipes from their library to specific meal slots on any given day.
+- Users will remove, replace, or reschedule meals on the calendar.
 
 #### 4. Consolidated Grocery Checklist
-- The system shall automatically generate a consolidated grocery list aggregating all ingredients from meals scheduled for the active week.
-- The system shall display the origin recipe associated with each aggregated ingredient.
-- The system shall allow users to manually add custom grocery or household items (e.g., snacks, pantry staples) not tied to a recipe.
-- The system shall provide an interactive checklist allowing users to check off items as purchased during shopping.
-- The system shall allow users to clear purchased items and reset the grocery checklist for a new shopping cycle.
+- The system will automatically generate a consolidated grocery list aggregating all ingredients from meals scheduled for the active week.
+- The system will display the origin recipe associated with each aggregated ingredient.
+- Users will manually add custom grocery or household items (e.g., snacks, pantry staples) not tied to a recipe.
+- The system will provide an interactive checklist allowing users to check off items as purchased during shopping.
+- The system will allow users to clear purchased items and reset the grocery checklist for a new shopping cycle.
 
 
 ---
@@ -112,27 +111,19 @@ Planning meals and coordinating grocery shopping is a recurring weekly challenge
 ### Technical Considerations
 
 1. **Technology Stack:**
-   - **Framework:** .NET 8 / C# with ASP.NET Core Blazor Web App (Interactive Server / WebAssembly components).
+   - **Framework:** .NET 10 / C# with ASP.NET Core Blazor Web App Interactive Server.
    - **Data Layer:** Entity Framework Core (EF Core) with Code-First Migrations.
-   - **Database:** SQLite (local development) and Azure SQL / PostgreSQL (cloud production).
+   - **Database:** SQLite (local development) and Netlify SQL or Azure SQL / PostgreSQL (cloud production).
    - **Authentication:** ASP.NET Core Identity.
-2. **Performance & Optimization:**
-   - Page load time under 2 seconds on standard broadband/mobile networks.
-   - Efficient database queries utilizing EF Core projections (`Select`) and `AsNoTracking` for read-only listings.
-3. **Security:**
-   - Industry-standard password hashing (PBKDF2) and secure cookie handling via ASP.NET Core Identity.
-   - Protection against common web vulnerabilities: Anti-Forgery Tokens (CSRF), parameterized SQL queries (preventing SQL injection), and input sanitization (XSS prevention).
-4. **Usability & Mobile Responsiveness:**
-   - Mobile-first, responsive design allowing frictionless usability on smartphones in grocery aisles.
+2. **Usability & Mobile Responsiveness:**
+   - Responsive design allowing frictionless usability on smartphones in grocery aisles.
    - Clear visual hierarchy, consistent typography, and intuitive button placements.
-5. **Accessibility (WCAG 2.1 Level AA):**
-   - High-contrast visual elements, appropriate ARIA labels for buttons and inputs, and complete keyboard navigability.
-6. **Data Validation & Reliability:**
+3. **Data Validation & Reliability:**
    - Model validation on all forms using DataAnnotations (e.g., required recipe title, non-negative quantities, valid email formats) with real-time UI feedback.
-7. **Documentation & Code Quality:**
+4. **Documentation & Code Quality:**
    - Clean, readable C# following standard naming conventions.
    - Meaningful XML/code comments on complex service logic and a comprehensive User Guide (setup and usage instructions in README).
-8. **Cloud Deployment:**
+5. **Cloud Deployment:**
    - Continuous deployment from GitHub to a cloud hosting environment (e.g., Azure App Service) with high availability for the final presentation.
 
 
