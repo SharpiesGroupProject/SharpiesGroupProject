@@ -161,41 +161,41 @@ The project will focus on providing the essential functionality needed to plan m
 •	Allow users to associate existing recipes with planned meals.<br>
 •	Allow users to view the meals planned for specific days.<br>
 ### Recipe Management
-•	Provide a recipe management page where users can create, view, update, and delete recipes.
-•	Allow users to enter recipe names, ingredients, ingredient quantities, and preparation instructions.
-•	Store recipes so they can be reused in future meal plans.
-•	Allow users to select saved recipes when creating meal plans.
-Grocery List Management
-•	Provide a grocery list page where users can view the items needed for their planned meals.
-•	Automatically add the ingredients from selected recipes to the grocery list.
-•	Allow users to manually add grocery items that are not associated with planned meals.
-•	Allow users to update or remove manually added grocery items.
-•	Identify which grocery list items were generated from planned meals.
-•	Display the associated meal or recipe for automatically generated grocery items.
-•	Allow users to mark grocery items as purchased.
-•	Update the grocery list when meals are added to or removed from the meal plan.
-User Interface
-•	Provide navigation between the meal planning, recipe management, and grocery list pages.
-•	Use a consistent interface throughout the application.
-•	Provide forms and controls for adding, editing, and deleting information.
-•	Display appropriate messages when required information is missing or invalid.
-•	Support use on desktop and mobile devices through a responsive interface.
-Features Excluded from the Project
-The following features will not be included in the initial version of the application:
-•	User Accounts: Users will not be able to create accounts and log in.
-•	Rate Difficulty of Recipes: The application will not allow you to rate the difficulty of recipes.
-•	Dietary Restrictions: The application will not provide a way to include dietary restrictions.
-•	Nutritional Analysis: The application will not calculate calories, nutritional values, or dietary information for recipes.
-•	Recipe Import from External Websites: Users will enter and maintain their own recipes rather than importing recipes directly from websites.
-•	Pantry Inventory Management: The application will not track the quantities of ingredients users currently have in their homes.
-•	AI-Generated Meal Recommendations: The application will not automatically recommend meals using artificial intelligence.
-These features may be considered for future development but are outside the scope of the initial project.
-Functional Requirements
+•	Provide a recipe management page where users can create, view, update, and delete recipes.<br>
+•	Allow users to enter recipe names, ingredients, ingredient quantities, and preparation instructions.<br>
+•	Store recipes so they can be reused in future meal plans.<br>
+•	Allow users to select saved recipes when creating meal plans.<br>
+### Grocery List Management
+•	Provide a grocery list page where users can view the items needed for their planned meals.<br>
+•	Automatically add the ingredients from selected recipes to the grocery list.<br>
+•	Allow users to manually add grocery items that are not associated with planned meals.<br>
+•	Allow users to update or remove manually added grocery items.<br>
+•	Identify which grocery list items were generated from planned meals.<br>
+•	Display the associated meal or recipe for automatically generated grocery items.<br>
+•	Allow users to mark grocery items as purchased.<br>
+•	Update the grocery list when meals are added to or removed from the meal plan.<br>
+### User Interface
+•	Provide navigation between the meal planning, recipe management, and grocery list pages.<br>
+•	Use a consistent interface throughout the application.<br>
+•	Provide forms and controls for adding, editing, and deleting information.<br>
+•	Display appropriate messages when required information is missing or invalid.<br>
+•	Support use on desktop and mobile devices through a responsive interface.<br>
+### Features Excluded from the Project
+The following features will not be included in the initial version of the application:<br>
+•	User Accounts: Users will not be able to create accounts and log in.<br>
+•	Rate Difficulty of Recipes: The application will not allow you to rate the difficulty of recipes.<br>
+•	Dietary Restrictions: The application will not provide a way to include dietary restrictions.<br>
+•	Nutritional Analysis: The application will not calculate calories, nutritional values, or dietary information for recipes.<br>
+•	Recipe Import from External Websites: Users will enter and maintain their own recipes rather than importing recipes directly from websites.<br>
+•	Pantry Inventory Management: The application will not track the quantities of ingredients users currently have in their homes.<br>
+•	AI-Generated Meal Recommendations: The application will not automatically recommend meals using artificial intelligence.<br>
+These features may be considered for future development but are outside the scope of the initial project.<br>
+## Functional Requirements
 The purpose of functional requirements are to describe the specific actions and operations that the Meal Planner application must perform.
-Each functional requirement is assigned a unique identifier to simplify organization, development, testing, and tracking in Jira.
-Meal Planning Requirements
-FR-1: View Meal Plans
-The system shall allow users to view their planned meals organized by date.
+Each functional requirement is assigned a unique identifier to simplify organization, development, testing, and tracking in Jira.<br>
+### Meal Planning Requirements
+#### FR-1: View Meal Plans
+The system shall allow users to view their planned meals organized by date.<br>
 FR-2: Add Planned Meals
 The system shall allow users to add a meal to a selected date in their meal plan.
 FR-3: Edit Planned Meals
