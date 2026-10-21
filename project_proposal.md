@@ -133,25 +133,34 @@ Planning meals and coordinating grocery shopping is a recurring weekly challenge
 
 
 <ins>Jeremy Troy Suchanski</ins>
-Meal Planner: A Meal Planning and Grocery List Management Application
-Overview
+# Meal Planner: A Meal Planning and Grocery List Management Application<br>
+## Overview
 The Meal Planner application will be designed with the intention to help families and individuals organize their meals, manage recipes, and simplify grocery shopping. The application's primary goal is to provide a centralized location where users can plan meals, store recipes, and automatically generate grocery lists based on their planned meals.
+
 Planning meals and preparing grocery lists is a time-consuming process, especially for families who need to organize multiple meals throughout the week. This process consists of having to decide on what meals to prepare, following the desired recipes, identifying what ingredients are required, and manually creating a grocery list for the items that are not already in stock at home. Performing all of these tasks requires coordination of these different moving parts and can result in forgotten ingredients, duplicate grocery purchases, and extra amounts of time spent organizing meals and shopping.
+
 The Meal Planner application purpose is to address these real-world problems by connecting three primary functions: meal planning, recipe management, and grocery list management.
+
 Users of the Meal Planner application will be able to create and maintain a collection of recipes, select meals to include in their meal plans, and automatically add the required recipe ingredients to their grocery lists. The application will also allow users to manually add any additionally desired grocery items that are not associated with planned meals.
+
 One of the application's distinguishing features will be its ability to maintain a connection between grocery list items and the planned meals that require them. This will allow users to identify which ingredients are needed for specific meals and distinguish those ingredients from grocery items added independently.
+
 The target users will primarily be families who regularly plan meals and shop for groceries. However, the application will also benefit individuals, couples, and anyone interested in simplifying meal preparation and grocery shopping.
+
 The overall goal of the project is to develop a user-friendly application that improves meal planning organization, reduces the time required to do it, and helps to automate the creation of a grocery list, thereby making obtaining of the necessary groceries more efficient.
-Scope
+
+## Scope
 The scope of the Meal Planner project includes developing an application that allows users to create, manage, and maintain meal plans and recipes, and grocery lists. These features will be integrated so that changes to planned meals can be reflected in the grocery list.
+
 The project will focus on providing the essential functionality needed to plan meals, create recipes, and prepare grocery lists without introducing unnecessary complexity.
-Meal Planning Features
-•	Provide a meal planning page where users can view and organize their planned meals.
-•	Allow users to add meals to their meal plans.
-•	Allow users to update or remove planned meals.
-•	Allow users to associate existing recipes with planned meals.
-•	Allow users to view the meals planned for specific days.
-Recipe Management
+
+### Meal Planning Features
+•	Provide a meal planning page where users can view and organize their planned meals.<br>
+•	Allow users to add meals to their meal plans.<br>
+•	Allow users to update or remove planned meals.<br>
+•	Allow users to associate existing recipes with planned meals.<br>
+•	Allow users to view the meals planned for specific days.<br>
+### Recipe Management
 •	Provide a recipe management page where users can create, view, update, and delete recipes.
 •	Allow users to enter recipe names, ingredients, ingredient quantities, and preparation instructions.
 •	Store recipes so they can be reused in future meal plans.
