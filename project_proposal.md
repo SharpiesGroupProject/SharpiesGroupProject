@@ -305,8 +305,11 @@ The development team shall maintain the application's source code in a shared ve
 #### NFR-21: Testing
 The development team shall test the application's primary functions, including recipe management, meal planning, automatic grocery list generation, and the preservation of manually added grocery items.
 ## Conclusion
-The Meal Planner project will provide a practical solution for individuals and families who want to simplify meal planning and grocery shopping.<br>
-By combining meal planning, recipe management, and grocery list management into a single application, users will be able to organize their meals and automatically identify the ingredients needed for grocery shopping.<br>
-The application's ability to maintain relationships between planned meals and grocery list items will provide an additional level of organization beyond a traditional grocery list.<br>
+The Meal Planner project will provide a practical solution for individuals and families who want to simplify meal planning and grocery shopping.
+
+By combining meal planning, recipe management, and grocery list management into a single application, users will be able to organize their meals and automatically identify the ingredients needed for grocery shopping.
+
+The application's ability to maintain relationships between planned meals and grocery list items will provide an additional level of organization beyond a traditional grocery list.
+
 The project will focus on developing a functional, reliable, and user-friendly application while maintaining a manageable scope for the development team. The resulting application will provide a foundation that could be expanded in the future to include additional features such as user accounts, dietary restrictions, nutritional analysis, recipe imports, and advanced meal planning capabilities.
 
