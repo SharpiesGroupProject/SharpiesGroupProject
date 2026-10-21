@@ -200,113 +200,113 @@ Each functional requirement is assigned a unique identifier to simplify organiza
 The system shall allow users to view their planned meals organized by date.
 #### FR-2: Add Planned Meals
 The system shall allow users to add a meal to a selected date in their meal plan.
-FR-3: Edit Planned Meals
+#### FR-3: Edit Planned Meals
 The system shall allow users to modify existing planned meals, including changing the associated recipe or scheduled date.
-FR-4: Remove Planned Meals
+#### FR-4: Remove Planned Meals
 The system shall allow users to remove meals from their meal plans.
-FR-5: Associate Recipes with Meals
+#### FR-5: Associate Recipes with Meals
 The system shall allow users to select an existing recipe and associate it with a planned meal.
-FR-6: Display Meal Details
+#### FR-6: Display Meal Details
 The system shall allow users to view the recipe information associated with a planned meal, including its ingredients and preparation instructions.
-Recipe Management Requirements
-FR-7: Create Recipes
+### Recipe Management Requirements
+#### FR-7: Create Recipes
 The system shall allow users to create recipes by entering a recipe name, ingredients, ingredient quantities, and preparation instructions.
-FR-8: View Recipes
+#### FR-8: View Recipes
 The system shall display a list of saved recipes and allow users to view the details of an individual recipe.
-FR-9: Edit Recipes
+#### FR-9: Edit Recipes
 The system shall allow users to update existing recipe information, including ingredients, quantities, and preparation instructions.
-FR-10: Delete Recipes
+#### FR-10: Delete Recipes
 The system shall allow users to delete saved recipes, with appropriate handling of recipes currently associated with planned meals.
-FR-11: Store Recipes
+#### FR-11: Store Recipes
 The system shall store recipe information persistently so users can retrieve and reuse saved recipes.
-FR-12: Validate Recipe Information
+#### FR-12: Validate Recipe Information
 The system shall validate required recipe fields before allowing a recipe to be saved and display an appropriate message when required information is missing.
-Grocery List Requirements
-FR-13: View Grocery List
+### Grocery List Requirements
+#### FR-13: View Grocery List
 The system shall display a grocery list containing ingredients generated from planned meals and items added manually by users.
-FR-14: Automatically Generate Grocery Items
+#### FR-14: Automatically Generate Grocery Items
 The system shall automatically add the ingredients required by a recipe to the grocery list when that recipe is added to the meal plan.
-FR-15: Identify Grocery Item Sources
+#### FR-15: Identify Grocery Item Sources
 The system shall identify whether each grocery list item was automatically generated from a planned meal or manually added by the user.
-FR-16: Associate Grocery Items with Planned Meals
+#### FR-16: Associate Grocery Items with Planned Meals
 The system shall maintain an association between automatically generated grocery items and the planned meals that require them.
-FR-17: Add Grocery Items Manually
+#### FR-17: Add Grocery Items Manually
 The system shall allow users to manually add grocery items that are not associated with planned meals.
-FR-18: Edit Manually Added Grocery Items
+#### FR-18: Edit Manually Added Grocery Items
 The system shall allow users to modify the names and quantities of manually added grocery items.
-FR-19: Remove Manually Added Grocery Items
+#### FR-19: Remove Manually Added Grocery Items
 The system shall allow users to remove manually added grocery items from their grocery lists.
-FR-20: Update Grocery List When Meals Change
+#### FR-20: Update Grocery List When Meals Change
 The system shall update the automatically generated portion of the grocery list when a planned meal is added, modified, or removed, while preserving unrelated manually added grocery items.
-FR-21: Mark Grocery Items as Purchased
+#### FR-21: Mark Grocery Items as Purchased
 The system shall allow users to mark grocery items as purchased and distinguish purchased items from items that still need to be purchased.
-FR-22: Display Grocery Item Quantities
+#### FR-22: Display Grocery Item Quantities
 The system shall display the required quantities and measurement units for grocery items when that information is available.
-Navigation and User Interface Requirements
-FR-23: Navigate Between Application Pages
+### Navigation and User Interface Requirements
+#### FR-23: Navigate Between Application Pages
 The system shall provide navigation controls that allow users to move between the meal planning, recipe management, and grocery list pages.
-FR-24: Display Confirmation Messages
+#### FR-24: Display Confirmation Messages
 The system shall provide confirmation or feedback messages when users successfully add, update, or delete information.
-FR-25: Display Validation Errors
+#### FR-25: Display Validation Errors
 The system shall display understandable error messages when users enter invalid information or attempt to submit incomplete forms.
-FR-26: Confirm Deletion Actions
+#### FR-26: Confirm Deletion Actions
 The system shall request confirmation before permanently deleting a saved recipe or other information whose deletion may affect associated records.
-FR-27: Persist Application Data
+#### FR-27: Persist Application Data
 The system shall save changes to meal plans, recipes, and grocery lists so that the information remains available when the application is closed and reopened.
-Non-Functional Requirements
+## Non-Functional Requirements
 The purpose of non-functional requirements are to define how the application should operate, including performance, usability, reliability, security, and maintainability.
 These requirements establish quality standards that will help ensure the Meal Planner application is practical, reliable, and easy to use.
-Performance Requirements
-NFR-1: Page Loading Performance
+### Performance Requirements
+#### NFR-1: Page Loading Performance
 The application shall load its primary pages within 3 seconds under normal operating conditions and with a typical amount of stored data.
-NFR-2: Grocery List Generation Performance
+#### NFR-2: Grocery List Generation Performance
 The application shall update the grocery list within 2 seconds after a user adds or removes a planned meal under normal operating conditions.
-NFR-3: User Interaction Responsiveness
+#### NFR-3: User Interaction Responsiveness
 The application shall provide visible feedback within 1 second when a user initiates an action, such as saving a recipe or adding a grocery item.
-Usability Requirements
-NFR-4: Intuitive Navigation
+### Usability Requirements
+#### NFR-4: Intuitive Navigation
 The application shall provide consistent navigation controls and clearly labeled pages so users can easily locate the meal planning, recipe management, and grocery list features.
-NFR-5: Responsive Design
+#### NFR-5: Responsive Design
 The application shall provide a responsive interface that adapts to desktop, tablet, and mobile screen sizes without requiring horizontal scrolling for primary application functions.
-NFR-6: Consistent User Interface
+#### NFR-6: Consistent User Interface
 The application shall use consistent layouts, colors, buttons, labels, and form controls throughout its pages.
-NFR-7: Clear Error Messages
+#### NFR-7: Clear Error Messages
 The application shall display error messages that identify the problem and provide sufficient information for users to correct invalid or missing entries.
-NFR-8: Accessibility
+#### NFR-8: Accessibility
 The application shall support readable text, appropriately labeled form controls, and sufficient color contrast, following applicable WCAG 2.2 Level AA guidelines where feasible.
-Security Requirements
-NFR-9: Input Validation
+### Security Requirements
+#### NFR-9: Input Validation
 The application shall validate user-provided information before processing or storing it to reduce the risk of invalid data and common security vulnerabilities.
-NFR-10: Secure Data Handling
+#### NFR-10: Secure Data Handling
 The application shall use secure data handling practices to protect stored information and prevent unauthorized modification of application data.
-NFR-11: Protection Against Common Web Vulnerabilities
+#### NFR-11: Protection Against Common Web Vulnerabilities
 The application shall use appropriate safeguards against common web application vulnerabilities, including cross-site scripting and injection attacks.
-Reliability Requirements
-NFR-12: Data Persistence
+### Reliability Requirements
+#### NFR-12: Data Persistence
 The application shall preserve saved meal plans, recipes, and grocery list information between application sessions.
-NFR-13: Data Consistency
+#### NFR-13: Data Consistency
 The application shall maintain consistent relationships between planned meals, recipes, and automatically generated grocery items when associated information changes.
-NFR-14: Error Handling
+#### NFR-14: Error Handling
 The application shall handle unexpected errors without unnecessarily losing previously saved information and shall display an understandable message when an operation cannot be completed.
-NFR-15: Grocery List Accuracy
+#### NFR-15: Grocery List Accuracy
 The application shall correctly identify the ingredients required by planned meals and shall not remove unrelated manually added grocery items when a planned meal is changed or deleted.
-Compatibility Requirements
-NFR-16: Browser Compatibility
+### Compatibility Requirements
+#### NFR-16: Browser Compatibility
 The application shall support current versions of major web browsers, including Google Chrome, Microsoft Edge, Mozilla Firefox, and Safari.
-NFR-17: Device Compatibility
+#### NFR-17: Device Compatibility
 The application shall support common desktop, tablet, and smartphone screen sizes through its responsive interface.
 Maintainability Requirements
-NFR-18: Modular Design
+#### NFR-18: Modular Design
 The application shall organize its functionality into separate, maintainable components for meal planning, recipe management, and grocery list management.
-NFR-19: Code Readability
+#### NFR-19: Code Readability
 The application's source code shall follow consistent naming conventions, formatting practices, and organizational standards established by the development team.
-NFR-20: Version Control
+#### NFR-20: Version Control
 The development team shall maintain the application's source code in a shared version control repository and use version control to track changes throughout development.
-NFR-21: Testing
+#### NFR-21: Testing
 The development team shall test the application's primary functions, including recipe management, meal planning, automatic grocery list generation, and the preservation of manually added grocery items.
-Conclusion
-The Meal Planner project will provide a practical solution for individuals and families who want to simplify meal planning and grocery shopping.
-By combining meal planning, recipe management, and grocery list management into a single application, users will be able to organize their meals and automatically identify the ingredients needed for grocery shopping.
-The application's ability to maintain relationships between planned meals and grocery list items will provide an additional level of organization beyond a traditional grocery list.
+## Conclusion
+The Meal Planner project will provide a practical solution for individuals and families who want to simplify meal planning and grocery shopping.<br>
+By combining meal planning, recipe management, and grocery list management into a single application, users will be able to organize their meals and automatically identify the ingredients needed for grocery shopping.<br>
+The application's ability to maintain relationships between planned meals and grocery list items will provide an additional level of organization beyond a traditional grocery list.<br>
 The project will focus on developing a functional, reliable, and user-friendly application while maintaining a manageable scope for the development team. The resulting application will provide a foundation that could be expanded in the future to include additional features such as user accounts, dietary restrictions, nutritional analysis, recipe imports, and advanced meal planning capabilities.
 
