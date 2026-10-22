@@ -190,112 +190,31 @@ The system shall save changes to recipes, meal plans, and grocery lists so that 
 
 ## Non-Functional Requirements
 
-Non-functional requirements define how the application should operate, including performance, usability, security, reliability, and maintainability.
-They establish quality standards that help ensure MealCraft is practical, reliable, and easy to use.
+The application should be straightforward to use, reliable, and manageable for the development team.
 
-### Performance
+#### NFR-1: Usability
 
-#### NFR-1: Page Loading Performance
+The application should have clear navigation, consistent controls, and helpful messages when an action succeeds or needs correction.
 
-The application shall load its primary pages within 3 seconds under normal operating conditions and with a typical amount of stored data.
+#### NFR-2: Responsive Design
 
-#### NFR-2: Grocery List Generation Performance
+The application should remain usable on desktop and mobile screens, especially when viewing the grocery list while shopping.
 
-The application shall update the grocery list within 2 seconds after a user adds, changes, or removes a planned meal under normal operating conditions.
+#### NFR-3: Accessibility
 
-#### NFR-3: User Interaction Responsiveness
+The application should use readable text, labeled form controls, and clear visual contrast.
 
-The application shall provide visible feedback within 1 second when a user initiates an action, such as saving a recipe, assigning a meal, or checking off a grocery item.
+#### NFR-4: Data Persistence
 
-### Usability
+Saved recipes, meal plans, and grocery lists should remain available between user sessions.
 
-#### NFR-4: Intuitive Navigation
+#### NFR-5: Maintainability
 
-The application shall provide consistent navigation controls and clearly labeled pages so users can easily locate the recipe, meal planner, and grocery list features.
+The application should use readable, organized code, and the project README should explain how to set up and use the application.
 
-#### NFR-5: Responsive Design
+#### NFR-6: Testing
 
-The application shall provide a responsive interface that adapts to desktop, tablet, and mobile screen sizes without requiring horizontal scrolling for primary application functions, including viewing and checking off the grocery list while shopping on a smartphone.
-
-#### NFR-6: Consistent User Interface
-
-The application shall use consistent typography, layouts, colors, buttons, labels, and form controls throughout its pages.
-
-#### NFR-7: Clear Error Messages
-
-The application shall display error messages that identify the problem and provide sufficient information for users to correct invalid or missing entries.
-
-#### NFR-8: Accessibility
-
-The application shall support readable text, appropriately labeled form controls, and sufficient color contrast, following applicable WCAG 2.2 Level AA guidelines where feasible.
-
-### Security
-
-#### NFR-9: Authentication and Authorization
-
-The application shall use ASP.NET Core Identity for registration, login, and password management, shall store passwords only as salted hashes, and shall restrict access to application pages and data to authenticated users.
-
-#### NFR-10: Data Isolation
-
-The application shall enforce on the server that each user can read and modify only their own recipes, meal plans, and grocery items, regardless of the identifiers supplied in a request.
-
-#### NFR-11: Input Validation
-
-The application shall validate user-provided information using DataAnnotations before processing or storing it to reduce the risk of invalid data and common security vulnerabilities.
-
-#### NFR-12: Protection Against Common Web Vulnerabilities
-
-The application shall use appropriate safeguards against common web application vulnerabilities, including cross-site scripting, cross-site request forgery, and injection attacks, and shall serve all traffic over HTTPS.
-
-### Reliability
-
-#### NFR-13: Data Persistence
-
-The application shall preserve saved recipes, meal plans, and grocery list information between user sessions and application restarts.
-
-#### NFR-14: Data Consistency
-
-The application shall maintain consistent relationships between recipes, planned meals, and recipe-derived grocery items when associated information changes.
-
-#### NFR-15: Error Handling
-
-The application shall handle unexpected errors without unnecessarily losing previously saved information and shall display an understandable message when an operation cannot be completed.
-
-#### NFR-16: Grocery List Accuracy
-
-The application shall correctly total the ingredients required by the active week's planned meals and shall not remove manually added grocery items when a planned meal is changed or deleted.
-
-### Compatibility
-
-#### NFR-17: Browser Compatibility
-
-The application shall support current versions of major web browsers, including Google Chrome, Microsoft Edge, Mozilla Firefox, and Safari.
-
-#### NFR-18: Device Compatibility
-
-The application shall support common desktop, tablet, and smartphone screen sizes through its responsive interface.
-
-### Maintainability and Deployment
-
-#### NFR-19: Modular Design
-
-The application shall organize its functionality into separate, maintainable components and services for authentication, recipe management, meal planning, and grocery list management, with data access handled through Entity Framework Core and code-first migrations.
-
-#### NFR-20: Code Readability and Documentation
-
-The application's source code shall follow consistent C# naming conventions and formatting practices, include meaningful comments on complex service logic, and be accompanied by a README with setup and usage instructions.
-
-#### NFR-21: Version Control
-
-The development team shall maintain the application's source code in a shared GitHub repository and use version control to track changes throughout development.
-
-#### NFR-22: Testing
-
-The development team shall test the application's primary functions, including user authentication, recipe management, meal planning, grocery list generation, and the preservation of manually added grocery items.
-
-#### NFR-23: Cloud Deployment and Availability
-
-The application shall be deployed to a publicly accessible cloud host (such as Azure App Service) using continuous deployment from GitHub, and shall use a cloud-compatible database in production while using SQLite for local development.
+The development team should test the main application workflows, including recipes, meal planning, and grocery lists.
 
 ## App Features
 
