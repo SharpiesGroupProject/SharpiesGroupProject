@@ -49,6 +49,10 @@ Planning meals and coordinating grocery shopping is a recurring weekly challenge
 - **Social networking / community feeds:** The app will focus strictly on individual private user utility to maintain a clean, achievable scope.
 - **AI integrations:** No recipe generation supported by AI.
 
+### Potential future work
+- **Recipe import from external websites:** Users will enter and maintain their own recipes rather than importing recipes directly from websites.
+- **Dietary restriction page:** A page for users to create dietary restrictions associated with a person with the capability to use the profiles on the page to identify and coordinate recipes that meet the person's restrictions.
+
 ## Functional Requirements
 
 Functional requirements describe the specific actions and operations that the MealCraft application must perform.
