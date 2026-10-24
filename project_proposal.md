@@ -52,6 +52,7 @@ Planning meals and coordinating grocery shopping is a recurring weekly challenge
 ### Potential future work
 - **Recipe import from external websites:** Users will enter and maintain their own recipes rather than importing recipes directly from websites.
 - **Dietary restriction page:** A page for users to create dietary restrictions associated with a person with the capability to use the profiles on the page to identify and coordinate recipes that meet the person's restrictions.
+- **Home stock page:** A page for users to create a list of the food on hand at home that can be linked to the grocery list to coordinate what is needed on the list.
 
 ## Functional Requirements
 
