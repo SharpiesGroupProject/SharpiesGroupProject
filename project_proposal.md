@@ -37,6 +37,31 @@ Non-Functional Requirements:
 - Fast loading of pages and grocery list
 - Validation of meal/recipe creation so invalid data isn't put into database (if we do that)
 
+
+## Seth Taylor
+
+Title: Meal Planner
+
+Overview: A .NET Blazor web app that helps families and individuals plan their weekly meals. Users save recipes, assign them to days on a weekly calendar, and the app automatically builds a grocery list from those meals. This cuts down on planning time, forgotten ingredients, and wasted food, and makes cooking at home easier than eating out.
+
+Scope: In scope: recipe management (create, edit, delete), a weekly meal calendar, an auto-generated grocery list that shows which meal each item came from, manually added grocery items, and a database to store everything. Out of scope: AI meal suggestions, nutrition tracking, store/price integrations, and recipe imports from other websites.
+
+Functional Requirements:
+
+Recipe page to create, view, edit, and delete recipes
+Weekly meal plan page to assign recipes to days and meals
+Grocery list page that combines ingredients from planned meals
+Show which recipe each grocery item came from
+Add manual grocery items and check items off as purchased
+Grocery list updates when meals are added or removed
+
+Non-Functional Requirements:
+
+Fast page loads and grocery list updates
+Form validation so bad data isn’t saved
+Responsive design that works on a phone at the store
+Clean, readable code kept in the shared GitHub repo
+
 ## Proposal by: Milton Chino Mamani
 
 **Title:** MealCraft &ndash; .NET Blazor Weekly Meal Planner & Smart Grocery Assistant
