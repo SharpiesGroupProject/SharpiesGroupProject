@@ -229,6 +229,11 @@ The development team should test the main application workflows, including recip
 - The system will provide secure user authentication (login, logout, and session state).
 - The system will enforce data isolation, ensuring users can only access and modify their own recipes, meal plans, and grocery items.
 
+#### User Stories
+
+- As a user of this app, I want to be able to create a personal login that will allow me to create my own recipes, meal plans, and grocery lists that will be saved for me to use.
+- As an app user, I want to be able to securely log in to my own account and know that my information is safe.
+
 ### 2. Recipe Management (CRUD)
 
 - Users will create new recipes with title, description, category/tags, prep and cook times, servings, ingredients (quantity, unit, name), and cooking instructions.
@@ -237,11 +242,22 @@ The development team should test the main application workflows, including recip
 - Users will edit and update existing recipe details and ingredient lists.
 - Users will delete recipes from their library.
 
+#### User Stories
+
+- As a busy person, I want to be able to collect recipes in one place that I can easily organize and use.
+- As a person that likes to try new things, I want to be able to add new recipes when I find one that I want to try.
+- As a person that changes over time, I want to be able to remove or change recipes if I change my mind about what I like.
+
 ### 3. Weekly Meal Planner
 
 - The system will display an interactive 7-day calendar view (Monday through Sunday) organized by meal categories (Breakfast, Lunch, Dinner).
 - Users will assign recipes from their library to specific meal slots on any given day.
 - Users will remove, replace, or reschedule meals on the calendar.
+
+#### User Stories
+
+- As a busy person with a lot going on, I want to be able to easily plan and organize meals for a week.
+- Because things often change in my life, I want to be able to easily modify my meal plan if I need to change something.
 
 ### 4. Consolidated Grocery Checklist
 
@@ -250,6 +266,13 @@ The development team should test the main application workflows, including recip
 - Users will manually add custom grocery or household items (e.g., snacks, pantry staples) not tied to a recipe.
 - The system will provide an interactive checklist allowing users to check off items as purchased during shopping.
 - The system will allow users to clear purchased items and reset the grocery checklist for a new shopping cycle.
+
+#### User Stories
+
+- As a busy person, I want the grocery list for the week to be automatically created from the meals I plan so I can save time.
+- Because what I have in stock at home is often changing, I want to be able to modify my grocery list to remove items that I already have.
+- Because I may want to get other items from the grocery store aside from recipe ingredients, I want to be able to add additional items to the grocery list.
+- Because I often change my mind when shopping, I want to be clear about what items are required for the meals I've planned for the week, so I know why each item is on my list. I want to have a clear link to the recipe for each item on the grocery list that is associated with a recipe to make that clear to me.
 
 ## Technical Considerations
 
