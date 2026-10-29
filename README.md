@@ -54,12 +54,6 @@ Meal Planner app.
     - **Key Functionalities**: would be you could add, remove, and update vehicles and maintenance records. When you log a service like an oil change with the date and mileage, the next due             date would automatically be added to the upcoming maintenance page.
     - **Target Users**: would be anyone who owns a car, especially students and families who want to keep track of their vehicles’ upkeep without a mechanic reminding them.
 
-<ins>Drew Breneman</ins>
-1. scrapes Facebook market listings - to speed up access
-2.
-3.
-4.
-
 <ins>Milton Chino Mamani</ins>
 1. $${\color{magenta}\mathbf{Study\ tracker}}$$: place notes about classes we are taking - organize note, flashcards, links to resources
 - **Key Features**:
