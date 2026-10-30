@@ -1,4 +1,220 @@
 @page "/recipes"
+@using MealCraft.Models
 <PageTitle>Recipes - MealCraft</PageTitle>
+
 <h1>Recipe Management</h1>
-<p>Welcome to the Recipe Management page! Recipe Management page coming soon.</p>
+
+@if (!showForm)
+{
+    <button class="btn btn-primary mb-3" @onclick="OpenForm">Add Recipe</button>
+}
+
+@if (showForm)
+{
+    <EditForm Model="newRecipe" OnValidSubmit="SaveRecipe" FormName="addRecipe" class="card card-body mb-4">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <h2 class="h4">New Recipe</h2>
+
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <InputText class="form-control" @bind-Value="newRecipe.Title" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <InputTextArea class="form-control" rows="2" @bind-Value="newRecipe.Description" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Category / tags (comma separated)</label>
+            <InputText class="form-control" @bind-Value="tagInput" placeholder="e.g. Dinner, Vegetarian" />
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Prep time (min)</label>
+                <InputNumber class="form-control" @bind-Value="newRecipe.PrepTimeMinutes" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Cook time (min)</label>
+                <InputNumber class="form-control" @bind-Value="newRecipe.CookTimeMinutes" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Servings</label>
+                <InputNumber class="form-control" @bind-Value="newRecipe.Servings" />
+            </div>
+        </div>
+
+        <h3 class="h5">Ingredients</h3>
+        @foreach (var ingredient in newRecipe.Ingredients)
+        {
+            <div class="row g-2 mb-2" @key="ingredient">
+                <div class="col-3 col-md-2">
+                    <InputNumber class="form-control" placeholder="Qty" @bind-Value="ingredient.Quantity" />
+                </div>
+                <div class="col-3 col-md-2">
+                    <InputText class="form-control" placeholder="Unit" @bind-Value="ingredient.Unit" />
+                </div>
+                <div class="col-4 col-md-6">
+                    <InputText class="form-control" placeholder="Name" @bind-Value="ingredient.Name" />
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveIngredient(ingredient)">Remove</button>
+                </div>
+            </div>
+        }
+        <div class="mb-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddIngredient">Add ingredient</button>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Cooking instructions (one step per line)</label>
+            <InputTextArea class="form-control" rows="6" @bind-Value="newRecipe.Instructions" />
+        </div>
+
+        @if (formError is not null)
+        {
+            <div class="alert alert-danger">@formError</div>
+        }
+
+        <div>
+            <button type="submit" class="btn btn-success me-2">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancel</button>
+        </div>
+    </EditForm>
+}
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="list-group">
+            @foreach (var recipe in recipes)
+            {
+                <button type="button"
+                        class="list-group-item list-group-item-action @(selectedRecipe == recipe ? "active" : "")"
+                        @onclick="() => selectedRecipe = recipe">
+                    <div class="fw-bold">@recipe.Title</div>
+                    <small>@string.Join(", ", recipe.Tags)</small>
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        @if (selectedRecipe is null)
+        {
+            <p class="text-muted">Select a recipe to view its details.</p>
+        }
+        else
+        {
+            <h2>@selectedRecipe.Title</h2>
+            <p>@selectedRecipe.Description</p>
+            <p>
+                Prep: @selectedRecipe.PrepTimeMinutes min |
+                Cook: @selectedRecipe.CookTimeMinutes min |
+                Serves: @selectedRecipe.Servings
+            </p>
+
+            <h3 class="h5">Ingredients</h3>
+            <ul>
+                @foreach (var ingredient in selectedRecipe.Ingredients)
+                {
+                    <li>@ingredient.Quantity @ingredient.Unit @ingredient.Name</li>
+                }
+            </ul>
+
+            <h3 class="h5">Instructions</h3>
+            <ol>
+                @foreach (var step in SplitSteps(selectedRecipe.Instructions))
+                {
+                    <li>@step</li>
+                }
+            </ol>
+        }
+    </div>
+</div>
+
+@code {
+    // Sample data; replace with an EF Core query later.
+    private List<Recipe> recipes = new()
+    {
+        new Recipe
+        {
+            Id = 1,
+            Title = "Spaghetti Aglio e Olio",
+            Description = "A quick garlic and olive oil pasta.",
+            Tags = new() { "Dinner", "Pasta", "Vegetarian" },
+            PrepTimeMinutes = 5,
+            CookTimeMinutes = 15,
+            Servings = 2,
+            Ingredients = new()
+            {
+                new() { Quantity = 200, Unit = "g", Name = "spaghetti" },
+                new() { Quantity = 4, Unit = "cloves", Name = "garlic" },
+                new() { Quantity = 3, Unit = "tbsp", Name = "olive oil" }
+            },
+            Instructions = "Boil the spaghetti until al dente.\nSauté sliced garlic in olive oil.\nToss pasta with the garlic oil and serve."
+        },
+        new Recipe
+        {
+            Id = 2,
+            Title = "Overnight Oats",
+            Description = "No-cook make-ahead breakfast.",
+            Tags = new() { "Breakfast", "Make-ahead" },
+            PrepTimeMinutes = 5,
+            CookTimeMinutes = 0,
+            Servings = 1,
+            Ingredients = new()
+            {
+                new() { Quantity = 0.5m, Unit = "cup", Name = "rolled oats" },
+                new() { Quantity = 0.5m, Unit = "cup", Name = "milk" },
+                new() { Quantity = 1, Unit = "tbsp", Name = "honey" }
+            },
+            Instructions = "Combine all ingredients in a jar.\nRefrigerate overnight.\nTop with fruit and eat."
+        }
+    };
+
+    private Recipe? selectedRecipe;
+    private Recipe newRecipe = new();
+    private string tagInput = string.Empty;
+    private string? formError;
+    private bool showForm;
+
+    private void OpenForm()
+    {
+        newRecipe = new Recipe();
+        newRecipe.Ingredients.Add(new Ingredient());
+        tagInput = string.Empty;
+        formError = null;
+        showForm = true;
+    }
+
+    private void CloseForm() => showForm = false;
+
+    private void AddIngredient() => newRecipe.Ingredients.Add(new Ingredient());
+
+    private void RemoveIngredient(Ingredient ingredient) => newRecipe.Ingredients.Remove(ingredient);
+
+    private void SaveRecipe()
+    {
+        // Drop blank ingredient rows before validating.
+        newRecipe.Ingredients.RemoveAll(i => string.IsNullOrWhiteSpace(i.Name));
+        if (newRecipe.Ingredients.Count == 0)
+        {
+            formError = "Add at least one ingredient.";
+            return;
+        }
+
+        newRecipe.Tags = tagInput
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        // Temporary id until the database assigns one.
+        newRecipe.Id = recipes.Count == 0 ? 1 : recipes.Max(r => r.Id) + 1;
+        recipes.Add(newRecipe);
+        selectedRecipe = newRecipe;
+        showForm = false;
+    }
+
+    private static IEnumerable<string> SplitSteps(string instructions) =>
+        instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+}
