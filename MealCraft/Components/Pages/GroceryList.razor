@@ -1,4 +1,319 @@
 @page "/grocery-list"
+@using System.Globalization
+@using System.Linq
+
 <PageTitle>Grocery List - MealCraft</PageTitle>
-<h1>Grocery List</h1>
-<p>Welcome to the Grocery List page! Grocery List page coming soon.</p>
+
+<div class="grocery-page">
+    <div class="grocery-heading">
+        <div>
+            <p class="grocery-eyebrow">MEALCRAFT <span>/</span> SHOPPING</p>
+            <h1>Grocery list</h1>
+            <p class="grocery-subtitle">A little planning makes every grocery run easier.</p>
+        </div>
+        <div class="list-date">
+            <span class="date-label">YOUR LIST</span>
+            <strong>This week</strong>
+        </div>
+    </div>
+
+    <section class="grocery-summary" aria-label="Grocery list summary">
+        <div class="summary-card">
+            <span class="summary-icon summary-icon-green" aria-hidden="true">✓</span>
+            <div><strong>@RemainingCount</strong><span>left to get</span></div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon summary-icon-amber" aria-hidden="true">✓</span>
+            <div><strong>@PurchasedCount</strong><span>in your basket</span></div>
+        </div>
+        <div class="summary-card summary-card-total">
+            <span class="summary-icon summary-icon-neutral" aria-hidden="true">≡</span>
+            <div><strong>@items.Count</strong><span>items on your list</span></div>
+        </div>
+    </section>
+
+    <section class="add-item-panel" aria-labelledby="add-item-heading">
+        <div class="panel-heading">
+            <div>
+                <p class="section-kicker">MAKE IT YOURS</p>
+                <h2 id="add-item-heading">@(editingItemId is null ? "Add an item" : "Edit item")</h2>
+            </div>
+            <span class="add-item-mark" aria-hidden="true">+</span>
+        </div>
+
+        <form class="item-form" @onsubmit="SaveItem" @onsubmit:preventDefault>
+            <div class="form-field item-name-field">
+                <label for="item-name">Item name <span aria-hidden="true">*</span></label>
+                <input id="item-name" type="text" @bind="itemName" maxlength="80"
+                       placeholder="e.g. Ripe avocados" autocomplete="off" />
+            </div>
+            <div class="form-field quantity-field">
+                <label for="item-quantity">Quantity <span class="optional-label">optional</span></label>
+                <input id="item-quantity" type="text" @bind="itemQuantity" maxlength="40"
+                       placeholder="e.g. 3 or 500 g" />
+            </div>
+            <div class="form-field category-field">
+                <label for="item-category">Category</label>
+                <select id="item-category" @bind="itemCategory">
+                    @foreach (var category in Categories)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">@(editingItemId is null ? "Add to list" : "Save changes")</button>
+                @if (editingItemId is not null)
+                {
+                    <button class="text-button" type="button" @onclick="CancelEdit">Cancel</button>
+                }
+            </div>
+        </form>
+
+        @if (!string.IsNullOrEmpty(feedbackMessage))
+        {
+            <p class="form-feedback @(isValidationError ? "feedback-error" : "feedback-success")"
+               role="@(isValidationError ? "alert" : "status")" aria-live="polite">@feedbackMessage</p>
+        }
+    </section>
+
+    <section class="list-panel" aria-labelledby="list-heading">
+        <div class="list-toolbar">
+            <div>
+                <p class="section-kicker">READY WHEN YOU ARE</p>
+                <h2 id="list-heading">Your items <span class="item-count">@items.Count</span></h2>
+            </div>
+            <button type="button" class="clear-button" @onclick="ClearPurchased" disabled="@(PurchasedCount == 0)">
+                Clear purchased
+            </button>
+        </div>
+
+        <div class="list-filters" role="group" aria-label="Filter grocery items">
+            <button type="button" class="filter-button @(selectedFilter == "all" ? "selected" : "")"
+                    aria-pressed="@(selectedFilter == "all")" @onclick="@(() => SetFilter("all"))">
+                All <span>@items.Count</span>
+            </button>
+            <button type="button" class="filter-button @(selectedFilter == "to-buy" ? "selected" : "")"
+                    aria-pressed="@(selectedFilter == "to-buy")" @onclick="@(() => SetFilter("to-buy"))">
+                To buy <span>@RemainingCount</span>
+            </button>
+            <button type="button" class="filter-button @(selectedFilter == "purchased" ? "selected" : "")"
+                    aria-pressed="@(selectedFilter == "purchased")" @onclick="@(() => SetFilter("purchased"))">
+                Purchased <span>@PurchasedCount</span>
+            </button>
+        </div>
+
+        @if (!VisibleItems.Any())
+        {
+            <div class="empty-list">
+                <span class="empty-list-icon" aria-hidden="true">✓</span>
+                <h3>@(items.Count == 0 ? "Your list is clear" : "Nothing in this view")</h3>
+                <p>@(items.Count == 0 ? "Add an item above to get your shopping started." : "Try another filter to see your grocery items.")</p>
+            </div>
+        }
+        else
+        {
+            <ul class="grocery-items">
+                @foreach (var item in VisibleItems)
+                {
+                    <li class="grocery-item @(item.IsPurchased ? "is-purchased" : "")" @key="item.Id">
+                        <label class="purchase-toggle">
+                            <input type="checkbox" checked="@item.IsPurchased"
+                                   aria-label="Mark @item.Name @(item.IsPurchased ? "as not purchased" : "as purchased")"
+                                   @onchange="@(() => TogglePurchased(item.Id))" />
+                            <span class="custom-checkbox" aria-hidden="true"></span>
+                        </label>
+                        <div class="item-copy">
+                            <strong>@item.Name</strong>
+                            <div class="item-details">
+                                @if (!string.IsNullOrWhiteSpace(item.Quantity))
+                                {
+                                    <span>@item.Quantity</span>
+                                }
+                                <span class="category-tag">@item.Category</span>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button type="button" class="icon-button" aria-label="Edit @item.Name"
+                                    title="Edit item" @onclick="@(() => BeginEdit(item))">
+                                Edit
+                            </button>
+                            <button type="button" class="icon-button delete-button" aria-label="Delete @item.Name"
+                                    title="Delete item" @onclick="@(() => DeleteItem(item.Id))">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+        <p class="list-note">Changes are temporary and will reset when this page session ends.</p>
+    </section>
+</div>
+
+@code {
+    private static readonly string[] Categories = ["Produce", "Dairy", "Bakery", "Pantry", "Meat & seafood", "Household", "Other"];
+
+    private readonly List<GroceryItem> items =
+    [
+        new() { Id = 1, Name = "Avocados", Quantity = "3", Category = "Produce" },
+        new() { Id = 2, Name = "Baby spinach", Quantity = "1 bag", Category = "Produce" },
+        new() { Id = 3, Name = "Whole milk", Quantity = "1 L", Category = "Dairy" },
+        new() { Id = 4, Name = "Sourdough bread", Quantity = "1 loaf", Category = "Bakery" },
+        new() { Id = 5, Name = "Pasta", Quantity = "500 g", Category = "Pantry" },
+        new() { Id = 6, Name = "Cherry tomatoes", Quantity = "1 pint", Category = "Produce" },
+        new() { Id = 7, Name = "Dish soap", Quantity = "", Category = "Household" },
+        new() { Id = 8, Name = "Parmesan", Quantity = "1 small wedge", Category = "Dairy", IsPurchased = true }
+    ];
+
+    private string itemName = "";
+    private string itemQuantity = "";
+    private string itemCategory = Categories[0];
+    private string selectedFilter = "all";
+    private string feedbackMessage = "";
+    private bool isValidationError;
+    private int? editingItemId;
+    private int nextItemId = 9;
+
+    private int RemainingCount => items.Count(item => !item.IsPurchased);
+    private int PurchasedCount => items.Count(item => item.IsPurchased);
+
+    private IEnumerable<GroceryItem> VisibleItems => items
+        .Where(item => selectedFilter switch
+        {
+            "to-buy" => !item.IsPurchased,
+            "purchased" => item.IsPurchased,
+            _ => true
+        })
+        .OrderBy(item => item.IsPurchased)
+        .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    private void SaveItem()
+    {
+        var trimmedName = itemName.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            feedbackMessage = "Enter an item name before saving.";
+            isValidationError = true;
+            return;
+        }
+
+        if (editingItemId is int id)
+        {
+            var item = items.FirstOrDefault(existing => existing.Id == id);
+            if (item is null)
+            {
+                CancelEdit();
+                feedbackMessage = "That item could not be found. Please try again.";
+                isValidationError = true;
+                return;
+            }
+
+            item.Name = trimmedName;
+            item.Quantity = itemQuantity.Trim();
+            item.Category = itemCategory;
+            feedbackMessage = $"{item.Name} updated.";
+        }
+        else
+        {
+            items.Add(new GroceryItem
+            {
+                Id = nextItemId++,
+                Name = trimmedName,
+                Quantity = itemQuantity.Trim(),
+                Category = itemCategory
+            });
+            feedbackMessage = $"{trimmedName} added to your list.";
+        }
+
+        isValidationError = false;
+        ResetForm();
+    }
+
+    private void BeginEdit(GroceryItem item)
+    {
+        editingItemId = item.Id;
+        itemName = item.Name;
+        itemQuantity = item.Quantity;
+        itemCategory = item.Category;
+        feedbackMessage = "";
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+        feedbackMessage = "";
+        isValidationError = false;
+    }
+
+    private void DeleteItem(int id)
+    {
+        var item = items.FirstOrDefault(existing => existing.Id == id);
+        if (item is null)
+        {
+            return;
+        }
+
+        items.Remove(item);
+        if (editingItemId == id)
+        {
+            ResetForm();
+        }
+
+        feedbackMessage = $"{item.Name} removed from your list.";
+        isValidationError = false;
+    }
+
+    private void TogglePurchased(int id)
+    {
+        var item = items.FirstOrDefault(existing => existing.Id == id);
+        if (item is null)
+        {
+            return;
+        }
+
+        item.IsPurchased = !item.IsPurchased;
+        feedbackMessage = item.IsPurchased ? $"{item.Name} marked as purchased." : $"{item.Name} marked as not purchased.";
+        isValidationError = false;
+    }
+
+    private void ClearPurchased()
+    {
+        var purchasedItems = items.Where(item => item.IsPurchased).ToList();
+        if (purchasedItems.Count == 0)
+        {
+            return;
+        }
+
+        items.RemoveAll(item => item.IsPurchased);
+        if (editingItemId is int editingId && purchasedItems.Any(item => item.Id == editingId))
+        {
+            ResetForm();
+        }
+
+        feedbackMessage = $"{purchasedItems.Count.ToString(CultureInfo.InvariantCulture)} purchased item(s) cleared.";
+        isValidationError = false;
+    }
+
+    private void SetFilter(string filter)
+    {
+        selectedFilter = filter;
+    }
+
+    private void ResetForm()
+    {
+        editingItemId = null;
+        itemName = "";
+        itemQuantity = "";
+        itemCategory = Categories[0];
+    }
+
+    private sealed class GroceryItem
+    {
+        public int Id { get; init; }
+        public required string Name { get; set; }
+        public string Quantity { get; set; } = "";
+        public required string Category { get; set; }
+        public bool IsPurchased { get; set; }
+    }
+}
