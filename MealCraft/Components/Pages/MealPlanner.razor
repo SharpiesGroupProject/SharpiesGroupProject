@@ -2,4 +2,43 @@
 
 <PageTitle>Meal Planner - MealCraft</PageTitle>
 <h1>Weekly Meal Planner</h1>
-<p>Welcome to the Weekly Meal Planner page! Weekly Meal Planner page coming soon.</p>
+
+<table class="table table-bordered text-center">
+    <thead>
+        <tr>
+            <th>Meal</th>
+            @foreach (var day in Days)
+            {
+                <th>@day</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var slot in Slots)
+        {
+            <tr>
+                <th>@slot</th>
+                @foreach (var day in Days)
+                {
+                    <td>@Meals[(day, slot)]</td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private readonly string[] Days = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+    private readonly string[] Slots = { "Breakfast", "Lunch", "Dinner" };
+
+    private readonly Dictionary<(string Day, string Slot), string> Meals = new()
+    {
+        [("Monday", "Breakfast")] = "Oatmeal",       [("Monday", "Lunch")] = "Turkey Wrap",      [("Monday", "Dinner")] = "Spaghetti",
+        [("Tuesday", "Breakfast")] = "Scrambled Eggs",[("Tuesday", "Lunch")] = "Chicken Salad",  [("Tuesday", "Dinner")] = "Tacos",
+        [("Wednesday", "Breakfast")] = "Pancakes",   [("Wednesday", "Lunch")] = "BLT Sandwich",  [("Wednesday", "Dinner")] = "Chicken Stir Fry",
+        [("Thursday", "Breakfast")] = "Greek Yogurt",[("Thursday", "Lunch")] = "Tomato Soup",    [("Thursday", "Dinner")] = "Burgers",
+        [("Friday", "Breakfast")] = "Fruit Smoothie",[("Friday", "Lunch")] = "Quesadilla",       [("Friday", "Dinner")] = "Homemade Pizza",
+        [("Saturday", "Breakfast")] = "Waffles",     [("Saturday", "Lunch")] = "Grilled Cheese", [("Saturday", "Dinner")] = "Baked Salmon",
+        [("Sunday", "Breakfast")] = "French Toast",  [("Sunday", "Lunch")] = "Leftovers",        [("Sunday", "Dinner")] = "Roast Chicken",
+    };
+}
