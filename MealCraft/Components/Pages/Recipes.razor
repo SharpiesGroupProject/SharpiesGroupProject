@@ -1,5 +1,80 @@
 @page "/recipes"
+@using MealCraft.Data
+@using MealCraft.Models
+@using Microsoft.EntityFrameworkCore
+@inject MealCraftDbContext DbContext
 
 <PageTitle>Recipes - MealCraft</PageTitle>
-<h1>Recipe Management</h1>
-<p>Welcome to the Recipe Management page! Recipe Management page coming soon.</p>
+
+@* Display recipe details in plain text to test DB seeding. Please remove if when implementing UI*@
+@if (recipe is null)
+{
+    <p>No recipes found in the database.</p>
+}
+else
+{
+    <pre>
+Recipe
+Id: @recipe.Id
+Title: @recipe.Title
+Description: @recipe.Description
+Prep minutes: @recipe.PrepMinutes
+Cook minutes: @recipe.CookMinutes
+Servings: @recipe.Servings
+Instructions: @recipe.RecipeInstructions
+User ID: @recipe.UserId
+User email: @recipe.User.Email
+
+Tags:
+@foreach (var tag in recipe.RecipeTags)
+{
+    @($"- Recipe ID: {tag.RecipeId}, Name: {tag.TagName}\n")
+}
+
+Ingredients:
+@foreach (var ingredient in recipe.Ingredients)
+{
+    @($"- ID: {ingredient.Id}, Recipe ID: {ingredient.RecipeId}, Name: {ingredient.Name}, Quantity: {ingredient.Quantity} {ingredient.Unit}, Display order: {ingredient.DisplayOrder}\n")
+    @foreach (var source in ingredient.GroceryItemSources)
+    {
+        @($"  Grocery source: ID: {source.Id}, Grocery item ID: {source.GroceryListItemId}, Planned meal ID: {source.PlannedMealId}, Ingredient ID: {source.RecipeIngredientId}, Quantity: {source.Quantity} {source.Unit}\n")
+        @($"  Grocery item: Created: {source.GroceryListItem.CreatedAt}, Name: {source.GroceryListItem.Name}, Quantity: {source.GroceryListItem.Quantity} {source.GroceryListItem.Unit}, Source type: {source.GroceryListItem.SourceType}, Purchased: {source.GroceryListItem.IsPurchased}\n")
+    }
+}
+
+Planned meals:
+@foreach (var plannedMeal in recipe.PlannedMeals)
+{
+    @($"- ID: {plannedMeal.Id}, Meal plan ID: {plannedMeal.MealPlanId}, Recipe ID: {plannedMeal.RecipeId}, Date: {plannedMeal.MealDate}, Type: {plannedMeal.MealType}\n")
+    @($"  Meal plan: ID: {plannedMeal.MealPlan.Id}, User ID: {plannedMeal.MealPlan.UserId}, Week start: {plannedMeal.MealPlan.WeekStartDate}, Active: {plannedMeal.MealPlan.IsActive}\n")
+    @foreach (var source in plannedMeal.GroceryItemSources)
+    {
+        @($"  Grocery source: ID: {source.Id}, Grocery item ID: {source.GroceryListItemId}, Planned meal ID: {source.PlannedMealId}, Ingredient ID: {source.RecipeIngredientId}, Quantity: {source.Quantity} {source.Unit}\n")
+        @($"  Grocery item: Created: {source.GroceryListItem.CreatedAt}, Name: {source.GroceryListItem.Name}, Quantity: {source.GroceryListItem.Quantity} {source.GroceryListItem.Unit}, Source type: {source.GroceryListItem.SourceType}, Purchased: {source.GroceryListItem.IsPurchased}\n")
+    }
+}
+    </pre>
+}
+
+@code {
+    private Recipe? recipe;
+
+    protected override async Task OnInitializedAsync()
+    {
+        recipe = await DbContext.Recipes
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(item => item.User)
+            .Include(item => item.RecipeTags)
+            .Include(item => item.Ingredients)
+                .ThenInclude(ingredient => ingredient.GroceryItemSources)
+                    .ThenInclude(source => source.GroceryListItem)
+            .Include(item => item.PlannedMeals)
+                .ThenInclude(meal => meal.MealPlan)
+            .Include(item => item.PlannedMeals)
+                .ThenInclude(meal => meal.GroceryItemSources)
+                    .ThenInclude(source => source.GroceryListItem)
+            .OrderBy(item => item.Id)
+            .FirstOrDefaultAsync();
+    }
+}
