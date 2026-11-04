@@ -1,7 +1,11 @@
 using MealCraft.Components;
+using MealCraft.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddDbContext<MealCraftDbContext>(options =>
+    options.UseSqlite("Data Source=mealcraft.db"));
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
