@@ -1,5 +1,8 @@
 @page "/recipes"
+@using MealCraft.Data
 @using MealCraft.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<MealCraftDbContext> DbFactory
 <PageTitle>Recipes - MealCraft</PageTitle>
 
 <h1>Recipe Management</h1>
@@ -134,50 +137,23 @@
 </div>
 
 @code {
-    // Sample data; replace with an EF Core query later.
-    private List<Recipe> recipes = new()
-    {
-        new Recipe
-        {
-            Id = 1,
-            Title = "Spaghetti Aglio e Olio",
-            Description = "A quick garlic and olive oil pasta.",
-            Tags = new() { "Dinner", "Pasta", "Vegetarian" },
-            PrepTimeMinutes = 5,
-            CookTimeMinutes = 15,
-            Servings = 2,
-            Ingredients = new()
-            {
-                new() { Quantity = 200, Unit = "g", Name = "spaghetti" },
-                new() { Quantity = 4, Unit = "cloves", Name = "garlic" },
-                new() { Quantity = 3, Unit = "tbsp", Name = "olive oil" }
-            },
-            Instructions = "Boil the spaghetti until al dente.\nSauté sliced garlic in olive oil.\nToss pasta with the garlic oil and serve."
-        },
-        new Recipe
-        {
-            Id = 2,
-            Title = "Overnight Oats",
-            Description = "No-cook make-ahead breakfast.",
-            Tags = new() { "Breakfast", "Make-ahead" },
-            PrepTimeMinutes = 5,
-            CookTimeMinutes = 0,
-            Servings = 1,
-            Ingredients = new()
-            {
-                new() { Quantity = 0.5m, Unit = "cup", Name = "rolled oats" },
-                new() { Quantity = 0.5m, Unit = "cup", Name = "milk" },
-                new() { Quantity = 1, Unit = "tbsp", Name = "honey" }
-            },
-            Instructions = "Combine all ingredients in a jar.\nRefrigerate overnight.\nTop with fruit and eat."
-        }
-    };
-
+    private List<Recipe> recipes = new();
     private Recipe? selectedRecipe;
     private Recipe newRecipe = new();
     private string tagInput = string.Empty;
     private string? formError;
     private bool showForm;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = DbFactory.CreateDbContext();
+        recipes = await db.Recipes
+            .Include(r => r.RecipeTags)
+            .Include(r => r.Ingredients.OrderBy(i => i.DisplayOrder))
+            .AsNoTracking()
+            .OrderBy(r => r.Title)
+            .ToListAsync();
+    }
 
     private void OpenForm()
     {
@@ -194,7 +170,7 @@
 
     private void RemoveIngredient(Ingredient ingredient) => newRecipe.Ingredients.Remove(ingredient);
 
-    private void SaveRecipe()
+    private async Task SaveRecipe()
     {
         // Drop blank ingredient rows before validating.
         newRecipe.Ingredients.RemoveAll(i => string.IsNullOrWhiteSpace(i.Name));
@@ -208,8 +184,28 @@
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
 
-        // Temporary id until the database assigns one.
-        newRecipe.Id = recipes.Count == 0 ? 1 : recipes.Max(r => r.Id) + 1;
+        for (var i = 0; i < newRecipe.Ingredients.Count; i++)
+        {
+            newRecipe.Ingredients[i].DisplayOrder = i + 1;
+        }
+
+        await using var db = DbFactory.CreateDbContext();
+
+        // No auth yet, so recipes belong to the seeded demo user.
+        var userId = await db.Users
+            .Where(u => u.Email == DbSeeder.DemoEmail)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync();
+        if (userId is null)
+        {
+            formError = "No user found to own this recipe.";
+            return;
+        }
+
+        newRecipe.UserId = userId;
+        db.Recipes.Add(newRecipe);
+        await db.SaveChangesAsync();
+
         recipes.Add(newRecipe);
         selectedRecipe = newRecipe;
         showForm = false;
