@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<MealCraftDbContext>(options =>
+// Factory (also registers a scoped context) so Blazor Server components get short-lived contexts.
+builder.Services.AddDbContextFactory<MealCraftDbContext>(options =>
     options.UseSqlite("Data Source=mealcraft.db"));
 // Add services to the container.
 builder.Services.AddRazorComponents()
