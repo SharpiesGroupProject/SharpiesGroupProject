@@ -1,4 +1,10 @@
 @page "/grocery-list"
+@using MealCraft.Data
+@using MealCraft.Models
+@using Microsoft.Data.Sqlite
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<MealCraftDbContext> DbContextFactory
+@inject ILogger<GroceryList> Logger
 @using System.Globalization
 @using System.Linq
 
@@ -19,7 +25,7 @@
 
     <section class="grocery-summary" aria-label="Grocery list summary">
         <div class="summary-card">
-            <span class="summary-icon summary-icon-green" aria-hidden="true">✓</span>
+            <span class="summary-icon summary-icon-blue" aria-hidden="true">✓</span>
             <div><strong>@RemainingCount</strong><span>left to get</span></div>
         </div>
         <div class="summary-card">
@@ -36,7 +42,7 @@
         <div class="panel-heading">
             <div>
                 <p class="section-kicker">MAKE IT YOURS</p>
-                <h2 id="add-item-heading">@(editingItemId is null ? "Add an item" : "Edit item")</h2>
+                <h2 id="add-item-heading">Add an item</h2>
             </div>
             <span class="add-item-mark" aria-hidden="true">+</span>
         </div>
@@ -62,11 +68,7 @@
                 </select>
             </div>
             <div class="form-actions">
-                <button class="primary-button" type="submit">@(editingItemId is null ? "Add to list" : "Save changes")</button>
-                @if (editingItemId is not null)
-                {
-                    <button class="text-button" type="button" @onclick="CancelEdit">Cancel</button>
-                }
+                <button class="primary-button" type="submit">Add to list</button>
             </div>
         </form>
 
@@ -120,7 +122,7 @@
                         <label class="purchase-toggle">
                             <input type="checkbox" checked="@item.IsPurchased"
                                    aria-label="Mark @item.Name @(item.IsPurchased ? "as not purchased" : "as purchased")"
-                                   @onchange="@(() => TogglePurchased(item.Id))" />
+                                   @onchange="args => TogglePurchased(item.Id, args.Value is bool isPurchased && isPurchased)" />
                             <span class="custom-checkbox" aria-hidden="true"></span>
                         </label>
                         <div class="item-copy">
@@ -147,24 +149,62 @@
                 }
             </ul>
         }
-        <p class="list-note">Changes are temporary and will reset when this page session ends.</p>
+        <p class="list-note">Your grocery list and purchased status are saved between visits.</p>
     </section>
 </div>
+
+@if (editingItemId is not null)
+{
+    <div class="edit-modal-backdrop">
+        <section class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-item-heading"
+                 tabindex="-1" @onkeydown="HandleEditModalKeydown">
+            <div class="panel-heading edit-modal-heading">
+                <div>
+                    <p class="section-kicker">UPDATE YOUR LIST</p>
+                    <h2 id="edit-item-heading">Edit item</h2>
+                </div>
+                <button class="icon-button edit-modal-close" type="button" aria-label="Close edit dialog"
+                        @onclick="CancelEdit">×</button>
+            </div>
+
+            <form class="edit-item-form" @onsubmit="SaveItem" @onsubmit:preventDefault>
+                <div class="form-field">
+                    <label for="edit-item-name">Item name <span aria-hidden="true">*</span></label>
+                    <input id="edit-item-name" type="text" @bind="itemName" maxlength="80"
+                           autocomplete="off" autofocus />
+                </div>
+                <div class="form-field">
+                    <label for="edit-item-quantity">Quantity <span class="optional-label">optional</span></label>
+                    <input id="edit-item-quantity" type="text" @bind="itemQuantity" maxlength="40" />
+                </div>
+                <div class="form-field">
+                    <label for="edit-item-category">Category</label>
+                    <select id="edit-item-category" @bind="itemCategory">
+                        @foreach (var category in Categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </div>
+
+                @if (isValidationError && !string.IsNullOrEmpty(feedbackMessage))
+                {
+                    <p class="form-feedback feedback-error" role="alert">@feedbackMessage</p>
+                }
+
+                <div class="edit-modal-actions">
+                    <button class="text-button" type="button" @onclick="CancelEdit">Cancel</button>
+                    <button class="primary-button" type="submit">Save changes</button>
+                </div>
+            </form>
+        </section>
+    </div>
+}
 
 @code {
     private static readonly string[] Categories = ["Produce", "Dairy", "Bakery", "Pantry", "Meat & seafood", "Household", "Other"];
 
-    private readonly List<GroceryItem> items =
-    [
-        new() { Id = 1, Name = "Avocados", Quantity = "3", Category = "Produce" },
-        new() { Id = 2, Name = "Baby spinach", Quantity = "1 bag", Category = "Produce" },
-        new() { Id = 3, Name = "Whole milk", Quantity = "1 L", Category = "Dairy" },
-        new() { Id = 4, Name = "Sourdough bread", Quantity = "1 loaf", Category = "Bakery" },
-        new() { Id = 5, Name = "Pasta", Quantity = "500 g", Category = "Pantry" },
-        new() { Id = 6, Name = "Cherry tomatoes", Quantity = "1 pint", Category = "Produce" },
-        new() { Id = 7, Name = "Dish soap", Quantity = "", Category = "Household" },
-        new() { Id = 8, Name = "Parmesan", Quantity = "1 small wedge", Category = "Dairy", IsPurchased = true }
-    ];
+    private List<StandaloneGroceryItem> items = [];
 
     private string itemName = "";
     private string itemQuantity = "";
@@ -173,12 +213,11 @@
     private string feedbackMessage = "";
     private bool isValidationError;
     private int? editingItemId;
-    private int nextItemId = 9;
 
     private int RemainingCount => items.Count(item => !item.IsPurchased);
     private int PurchasedCount => items.Count(item => item.IsPurchased);
 
-    private IEnumerable<GroceryItem> VisibleItems => items
+    private IEnumerable<StandaloneGroceryItem> VisibleItems => items
         .Where(item => selectedFilter switch
         {
             "to-buy" => !item.IsPurchased,
@@ -188,7 +227,31 @@
         .OrderBy(item => item.IsPurchased)
         .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase);
 
-    private void SaveItem()
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadItemsAsync();
+    }
+
+    private async Task<bool> LoadItemsAsync()
+    {
+        try
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            items = await dbContext.StandaloneGroceryItems
+                .AsNoTracking()
+                .ToListAsync();
+            return true;
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to load standalone grocery items.");
+            feedbackMessage = "Unable to load your grocery list. Please try again.";
+            isValidationError = true;
+            return false;
+        }
+    }
+
+    private async Task SaveItem()
     {
         var trimmedName = itemName.Trim();
         if (string.IsNullOrWhiteSpace(trimmedName))
@@ -198,39 +261,57 @@
             return;
         }
 
-        if (editingItemId is int id)
+        try
         {
-            var item = items.FirstOrDefault(existing => existing.Id == id);
-            if (item is null)
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            string successMessage;
+
+            if (editingItemId is int id)
             {
-                CancelEdit();
-                feedbackMessage = "That item could not be found. Please try again.";
-                isValidationError = true;
-                return;
+                var item = await dbContext.StandaloneGroceryItems
+                    .FirstOrDefaultAsync(existing => existing.Id == id);
+                if (item is null)
+                {
+                    ResetForm();
+                    feedbackMessage = "That item could not be found. Please try again.";
+                    isValidationError = true;
+                    return;
+                }
+
+                item.Name = trimmedName;
+                item.Quantity = itemQuantity.Trim();
+                item.Category = itemCategory;
+                successMessage = $"{item.Name} updated.";
+            }
+            else
+            {
+                dbContext.StandaloneGroceryItems.Add(new StandaloneGroceryItem
+                {
+                    Name = trimmedName,
+                    Quantity = itemQuantity.Trim(),
+                    Category = itemCategory
+                });
+                successMessage = $"{trimmedName} added to your list.";
             }
 
-            item.Name = trimmedName;
-            item.Quantity = itemQuantity.Trim();
-            item.Category = itemCategory;
-            feedbackMessage = $"{item.Name} updated.";
-        }
-        else
-        {
-            items.Add(new GroceryItem
-            {
-                Id = nextItemId++,
-                Name = trimmedName,
-                Quantity = itemQuantity.Trim(),
-                Category = itemCategory
-            });
-            feedbackMessage = $"{trimmedName} added to your list.";
-        }
+            await dbContext.SaveChangesAsync();
+            ResetForm();
 
-        isValidationError = false;
-        ResetForm();
+            if (await LoadItemsAsync())
+            {
+                feedbackMessage = successMessage;
+                isValidationError = false;
+            }
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to save a standalone grocery item.");
+            feedbackMessage = "Unable to save the grocery item. Please try again.";
+            isValidationError = true;
+        }
     }
 
-    private void BeginEdit(GroceryItem item)
+    private void BeginEdit(StandaloneGroceryItem item)
     {
         editingItemId = item.Id;
         itemName = item.Name;
@@ -246,38 +327,86 @@
         isValidationError = false;
     }
 
-    private void DeleteItem(int id)
+    private void HandleEditModalKeydown(KeyboardEventArgs args)
     {
-        var item = items.FirstOrDefault(existing => existing.Id == id);
-        if (item is null)
+        if (args.Key == "Escape")
         {
-            return;
+            CancelEdit();
         }
-
-        items.Remove(item);
-        if (editingItemId == id)
-        {
-            ResetForm();
-        }
-
-        feedbackMessage = $"{item.Name} removed from your list.";
-        isValidationError = false;
     }
 
-    private void TogglePurchased(int id)
+    private async Task DeleteItem(int id)
     {
-        var item = items.FirstOrDefault(existing => existing.Id == id);
-        if (item is null)
+        try
         {
-            return;
-        }
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var item = await dbContext.StandaloneGroceryItems
+                .FirstOrDefaultAsync(existing => existing.Id == id);
+            if (item is null)
+            {
+                feedbackMessage = "That item could not be found. Please try again.";
+                isValidationError = true;
+                return;
+            }
 
-        item.IsPurchased = !item.IsPurchased;
-        feedbackMessage = item.IsPurchased ? $"{item.Name} marked as purchased." : $"{item.Name} marked as not purchased.";
-        isValidationError = false;
+            var itemName = item.Name;
+            dbContext.StandaloneGroceryItems.Remove(item);
+            await dbContext.SaveChangesAsync();
+
+            if (editingItemId == id)
+            {
+                ResetForm();
+            }
+
+            if (await LoadItemsAsync())
+            {
+                feedbackMessage = $"{itemName} removed from your list.";
+                isValidationError = false;
+            }
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to delete standalone grocery item {GroceryItemId}.", id);
+            feedbackMessage = "Unable to delete the grocery item. Please try again.";
+            isValidationError = true;
+        }
     }
 
-    private void ClearPurchased()
+    private async Task TogglePurchased(int id, bool isPurchased)
+    {
+        try
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var item = await dbContext.StandaloneGroceryItems
+                .FirstOrDefaultAsync(existing => existing.Id == id);
+            if (item is null)
+            {
+                feedbackMessage = "That item could not be found. Please try again.";
+                isValidationError = true;
+                return;
+            }
+
+            item.IsPurchased = isPurchased;
+            var successMessage = isPurchased
+                ? $"{item.Name} marked as purchased."
+                : $"{item.Name} marked as not purchased.";
+            await dbContext.SaveChangesAsync();
+
+            if (await LoadItemsAsync())
+            {
+                feedbackMessage = successMessage;
+                isValidationError = false;
+            }
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to update purchase status for grocery item {GroceryItemId}.", id);
+            feedbackMessage = "Unable to update the purchased status. Please try again.";
+            isValidationError = true;
+        }
+    }
+
+    private async Task ClearPurchased()
     {
         var purchasedItems = items.Where(item => item.IsPurchased).ToList();
         if (purchasedItems.Count == 0)
@@ -285,14 +414,33 @@
             return;
         }
 
-        items.RemoveAll(item => item.IsPurchased);
-        if (editingItemId is int editingId && purchasedItems.Any(item => item.Id == editingId))
+        try
         {
-            ResetForm();
-        }
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var persistedPurchasedItems = await dbContext.StandaloneGroceryItems
+                .Where(item => item.IsPurchased)
+                .ToListAsync();
+            var purchasedIds = persistedPurchasedItems.Select(item => item.Id).ToArray();
+            dbContext.StandaloneGroceryItems.RemoveRange(persistedPurchasedItems);
+            await dbContext.SaveChangesAsync();
 
-        feedbackMessage = $"{purchasedItems.Count.ToString(CultureInfo.InvariantCulture)} purchased item(s) cleared.";
-        isValidationError = false;
+            if (editingItemId is int editingId && purchasedIds.Contains(editingId))
+            {
+                ResetForm();
+            }
+
+            if (await LoadItemsAsync())
+            {
+                feedbackMessage = $"{persistedPurchasedItems.Count.ToString(CultureInfo.InvariantCulture)} purchased item(s) cleared.";
+                isValidationError = false;
+            }
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to clear purchased standalone grocery items.");
+            feedbackMessage = "Unable to clear purchased items. Please try again.";
+            isValidationError = true;
+        }
     }
 
     private void SetFilter(string filter)
@@ -308,12 +456,4 @@
         itemCategory = Categories[0];
     }
 
-    private sealed class GroceryItem
-    {
-        public int Id { get; init; }
-        public required string Name { get; set; }
-        public string Quantity { get; set; } = "";
-        public required string Category { get; set; }
-        public bool IsPurchased { get; set; }
-    }
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<MealCraftDbContext>(options =>
+builder.Services.AddDbContextFactory<MealCraftDbContext>(options =>
     options.UseSqlite("Data Source=mealcraft.db"));
 // Add services to the container.
 builder.Services.AddRazorComponents()
