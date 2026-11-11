@@ -122,7 +122,7 @@ namespace MealCraft.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("ProductId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Quantity")
@@ -322,7 +322,8 @@ namespace MealCraft.Migrations
                     b.HasOne("MealCraft.Models.Product", "Product")
                         .WithMany("RecipeIngredients")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("MealCraft.Models.Recipe", "Recipe")
                         .WithMany("Ingredients")

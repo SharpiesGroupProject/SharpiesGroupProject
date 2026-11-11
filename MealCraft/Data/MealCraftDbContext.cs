@@ -48,8 +48,8 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasOne(ingredient => ingredient.Product)
             .WithMany(product => product.RecipeIngredients)
             .HasForeignKey(ingredient => ingredient.ProductId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<MealPlan>()
             .HasOne(plan => plan.User)
