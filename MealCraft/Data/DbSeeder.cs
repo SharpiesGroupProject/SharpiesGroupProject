@@ -5,7 +5,7 @@ namespace MealCraft.Data;
 
 public static class DbSeeder
 {
-    private const string DemoEmail = "demo@mealcraft.local";
+    public const string DemoEmail = "demo@mealcraft.local";
 
     public static async Task SeedAsync(
         MealCraftDbContext context,
@@ -40,7 +40,7 @@ public static class DbSeeder
             PrepMinutes = 10,
             CookMinutes = 20,
             Servings = 4,
-            RecipeInstructions = "Cook the pasta. Saute the tomatoes in olive oil until softened. Toss with the pasta and finish with fresh basil.",
+            RecipeInstructions = "Cook the pasta.\nSaute the tomatoes in olive oil until softened.\nToss with the pasta and finish with fresh basil.",
             User = user,
             RecipeTags =
             [
