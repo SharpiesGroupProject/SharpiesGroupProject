@@ -3,13 +3,21 @@
 <PageTitle>Meal Planner - MealCraft</PageTitle>
 <h1>Weekly Meal Planner</h1>
 
-<table class="table table-bordered text-center">
+<div class="d-flex align-items-center gap-2 mb-3">
+    <button class="btn btn-outline-secondary" @onclick="GoToPreviousWeek">&laquo; Previous Week</button>
+    <button class="btn btn-outline-secondary" @onclick="GoToCurrentWeek" disabled="@(weekStart == CurrentWeekStart)">This Week</button>
+    <button class="btn btn-outline-secondary" @onclick="GoToNextWeek">Next Week &raquo;</button>
+    <span class="ms-3 fw-semibold">@weekStart.ToString("MMM d") - @weekStart.AddDays(6).ToString("MMM d, yyyy")</span>
+</div>
+
+<table class="table table-bordered text-center align-middle">
     <thead>
         <tr>
             <th>Meal</th>
-            @foreach (var day in Days)
+            @for (var i = 0; i < 7; i++)
             {
-                <th>@day</th>
+                var date = weekStart.AddDays(i);
+                <th>@date.ToString("ddd")<br />@date.ToString("M/d")</th>
             }
         </tr>
     </thead>
@@ -18,9 +26,33 @@
         {
             <tr>
                 <th>@slot</th>
-                @foreach (var day in Days)
+                @for (var i = 0; i < 7; i++)
                 {
-                    <td>@Meals[(day, slot)]</td>
+                    var date = weekStart.AddDays(i);
+                    var assigned = plannedMeals.TryGetValue((date, slot), out var recipe) ? recipe : null;
+                    var isEditing = editingCell == (date, slot);
+                    <td>
+                        @if (assigned is not null && !isEditing)
+                        {
+                            <div>@assigned.Name</div>
+                            <button class="btn btn-sm btn-outline-secondary me-1 mt-1" @onclick="() => StartEditing(date, slot)">Replace</button>
+                            <button class="btn btn-sm btn-outline-danger mt-1" @onclick="() => RemoveMeal(date, slot)">Remove</button>
+                        }
+                        else
+                        {
+                            <select class="form-select form-select-sm" value="@(assigned?.Id.ToString() ?? "")" @onchange="e => AssignRecipe(date, slot, e.Value?.ToString())">
+                                <option value="">-- Select recipe --</option>
+                                @foreach (var r in SampleRecipes)
+                                {
+                                    <option value="@r.Id">@r.Name</option>
+                                }
+                            </select>
+                            @if (isEditing)
+                            {
+                                <button class="btn btn-sm btn-link" @onclick="() => editingCell = null">Cancel</button>
+                            }
+                        }
+                    </td>
                 }
             </tr>
         }
@@ -28,17 +60,92 @@
 </table>
 
 @code {
-    private readonly string[] Days = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
-    private readonly string[] Slots = { "Breakfast", "Lunch", "Dinner" };
+    private static readonly string[] Slots = { "Breakfast", "Lunch", "Dinner" };
 
-    private readonly Dictionary<(string Day, string Slot), string> Meals = new()
+    private sealed record SampleRecipe(int Id, string Name);
+
+    private static readonly List<SampleRecipe> SampleRecipes = new()
     {
-        [("Monday", "Breakfast")] = "Oatmeal",       [("Monday", "Lunch")] = "Turkey Wrap",      [("Monday", "Dinner")] = "Spaghetti",
-        [("Tuesday", "Breakfast")] = "Scrambled Eggs",[("Tuesday", "Lunch")] = "Chicken Salad",  [("Tuesday", "Dinner")] = "Tacos",
-        [("Wednesday", "Breakfast")] = "Pancakes",   [("Wednesday", "Lunch")] = "BLT Sandwich",  [("Wednesday", "Dinner")] = "Chicken Stir Fry",
-        [("Thursday", "Breakfast")] = "Greek Yogurt",[("Thursday", "Lunch")] = "Tomato Soup",    [("Thursday", "Dinner")] = "Burgers",
-        [("Friday", "Breakfast")] = "Fruit Smoothie",[("Friday", "Lunch")] = "Quesadilla",       [("Friday", "Dinner")] = "Homemade Pizza",
-        [("Saturday", "Breakfast")] = "Waffles",     [("Saturday", "Lunch")] = "Grilled Cheese", [("Saturday", "Dinner")] = "Baked Salmon",
-        [("Sunday", "Breakfast")] = "French Toast",  [("Sunday", "Lunch")] = "Leftovers",        [("Sunday", "Dinner")] = "Roast Chicken",
+        new(1, "Oatmeal"), new(2, "Turkey Wrap"), new(3, "Spaghetti"),
+        new(4, "Scrambled Eggs"), new(5, "Chicken Salad"), new(6, "Tacos"),
+        new(7, "Pancakes"), new(8, "BLT Sandwich"), new(9, "Chicken Stir Fry"),
+        new(10, "Greek Yogurt"), new(11, "Tomato Soup"), new(12, "Burgers"),
+        new(13, "Fruit Smoothie"), new(14, "Quesadilla"), new(15, "Homemade Pizza"),
+        new(16, "Waffles"), new(17, "Grilled Cheese"), new(18, "Baked Salmon"),
+        new(19, "French Toast"), new(20, "Leftovers"), new(21, "Roast Chicken"),
     };
+
+    // Recipe ids for Breakfast/Lunch/Dinner, one row per day (Sunday through Saturday).
+    private static readonly int?[,] InitialAssignments =
+    {
+        { 19, 20, 21 }, // Sunday
+        { 1, 2, 3 },    // Monday
+        { 4, 5, 6 },    // Tuesday
+        { 7, 8, 9 },    // Wednesday
+        { 10, 11, 12 }, // Thursday
+        { 13, 14, 15 }, // Friday
+        { 16, 17, 18 }, // Saturday
+    };
+
+    private DateOnly weekStart = CurrentWeekStart;
+    private (DateOnly Date, string Slot)? editingCell;
+    private readonly Dictionary<(DateOnly Date, string Slot), SampleRecipe?> plannedMeals = new();
+
+    private static DateOnly CurrentWeekStart => StartOfWeek(DateOnly.FromDateTime(DateTime.Today));
+
+    private static DateOnly StartOfWeek(DateOnly date) => date.AddDays(-(int)date.DayOfWeek);
+
+    protected override void OnInitialized()
+    {
+        for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+        {
+            var date = weekStart.AddDays(dayIndex);
+            for (var slotIndex = 0; slotIndex < Slots.Length; slotIndex++)
+            {
+                if (InitialAssignments[dayIndex, slotIndex] is int recipeId)
+                {
+                    plannedMeals[(date, Slots[slotIndex])] = SampleRecipes.First(r => r.Id == recipeId);
+                }
+            }
+        }
+    }
+
+    private void GoToPreviousWeek()
+    {
+        weekStart = weekStart.AddDays(-7);
+        editingCell = null;
+    }
+
+    private void GoToNextWeek()
+    {
+        weekStart = weekStart.AddDays(7);
+        editingCell = null;
+    }
+
+    private void GoToCurrentWeek()
+    {
+        weekStart = CurrentWeekStart;
+        editingCell = null;
+    }
+
+    private void StartEditing(DateOnly date, string slot) => editingCell = (date, slot);
+
+    private void AssignRecipe(DateOnly date, string slot, string? value)
+    {
+        if (int.TryParse(value, out var id))
+        {
+            var recipe = SampleRecipes.FirstOrDefault(r => r.Id == id);
+            if (recipe is not null)
+            {
+                plannedMeals[(date, slot)] = recipe;
+            }
+        }
+        editingCell = null;
+    }
+
+    private void RemoveMeal(DateOnly date, string slot)
+    {
+        plannedMeals.Remove((date, slot));
+        editingCell = null;
+    }
 }
