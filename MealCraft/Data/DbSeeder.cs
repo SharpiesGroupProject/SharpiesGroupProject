@@ -5,7 +5,8 @@ namespace MealCraft.Data;
 
 public static class DbSeeder
 {
-    private const string DemoEmail = "demo@mealcraft.local";
+    public const string DemoName = "DemoUser";
+    public const string DemoEmail = "demo@mealcraft.local";
     private const string DemoRecipeTitle = "Tomato Basil Pasta";
 
     public static async Task SeedAsync(
@@ -22,10 +23,25 @@ public static class DbSeeder
 
         if (user is null)
         {
-            user = new ApplicationUser { Email = DemoEmail };
+            user = new ApplicationUser
+            {
+                UserName = DemoName,
+                NormalizedUserName = DemoName.ToUpperInvariant(),
+                Email = DemoEmail,
+                NormalizedEmail = DemoEmail.ToUpperInvariant(),
+                EmailConfirmed = true
+            };
             context.Users.Add(user);
-            await context.SaveChangesAsync(cancellationToken);
         }
+        else
+        {
+            user.UserName ??= DemoName;
+            user.NormalizedUserName ??= DemoName.ToUpperInvariant();
+            user.NormalizedEmail ??= DemoEmail.ToUpperInvariant();
+            user.EmailConfirmed = true;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
 
         var products = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
         var productDetails = new[]

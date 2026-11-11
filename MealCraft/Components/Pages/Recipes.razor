@@ -2,8 +2,7 @@
 @using MealCraft.Data
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
-@inject MealCraftDbContext DbContext
-
+@inject IDbContextFactory<MealCraftDbContext> DbFactory
 <PageTitle>Recipes - MealCraft</PageTitle>
 
 <h1>Recipe Management</h1>
@@ -246,7 +245,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        userId = await DbContext.Users
+        await using var db = DbFactory.CreateDbContext();
+        userId = await db.Users
             .Where(user => user.Email == DemoUserEmail)
             .Select(user => user.Id)
             .SingleOrDefaultAsync();
@@ -416,12 +416,13 @@
 
         try
         {
-            DbContext.Products.AddRange(productsToAdd);
+            await using var db = DbFactory.CreateDbContext();
+            db.Products.AddRange(productsToAdd);
 
             Recipe recipeToSave;
             if (isEditing)
             {
-                recipeToSave = await DbContext.Recipes
+                recipeToSave = await db.Recipes
                     .Include(recipe => recipe.Ingredients)
                     .Include(recipe => recipe.RecipeTags)
                     .SingleAsync(recipe => recipe.Id == newRecipe.Id);
@@ -433,7 +434,7 @@
                 recipeToSave.Servings = newRecipe.Servings;
                 recipeToSave.Instructions = newRecipe.Instructions;
 
-                DbContext.RecipeIngredients.RemoveRange(recipeToSave.Ingredients);
+                db.RecipeIngredients.RemoveRange(recipeToSave.Ingredients);
                 recipeToSave.Ingredients.Clear();
                 recipeToSave.Ingredients.AddRange(newRecipe.Ingredients);
 
@@ -443,7 +444,7 @@
                     if (!desiredTags.Contains(existingTag.TagName, StringComparer.OrdinalIgnoreCase))
                     {
                         recipeToSave.RecipeTags.Remove(existingTag);
-                        DbContext.RecipeTags.Remove(existingTag);
+                        db.RecipeTags.Remove(existingTag);
                     }
                 }
 
@@ -460,10 +461,10 @@
             {
                 newRecipe.UserId = userId!;
                 recipeToSave = newRecipe;
-                DbContext.Recipes.Add(recipeToSave);
+                db.Recipes.Add(recipeToSave);
             }
 
-            await DbContext.SaveChangesAsync();
+            await db.SaveChangesAsync();
 
             var savedRecipeId = recipeToSave.Id;
             await LoadRecipesAsync();
@@ -473,7 +474,6 @@
         }
         catch (DbUpdateException)
         {
-            DbContext.ChangeTracker.Clear();
             formError = "The recipe could not be saved because of a database error. Please review the recipe and try again.";
         }
     }
@@ -486,13 +486,14 @@
         }
 
         var recipeId = selectedRecipe.Id;
-        if (await DbContext.PlannedMeals.AnyAsync(meal => meal.RecipeId == recipeId))
+        await using var db = DbFactory.CreateDbContext();
+        if (await db.PlannedMeals.AnyAsync(meal => meal.RecipeId == recipeId))
         {
             deleteError = "This recipe is used in a meal plan and cannot be deleted until it is removed from the plan.";
             return;
         }
 
-        var recipe = await DbContext.Recipes
+        var recipe = await db.Recipes
             .Include(candidate => candidate.Ingredients)
             .Include(candidate => candidate.RecipeTags)
             .SingleOrDefaultAsync(candidate => candidate.Id == recipeId);
@@ -514,7 +515,7 @@
 
                 if (productIds.Count > 0)
                 {
-                    var productIdsUsedElsewhere = await DbContext.RecipeIngredients
+                    var productIdsUsedElsewhere = await db.RecipeIngredients
                         .Where(ingredient => ingredient.RecipeId != recipeId
                             && ingredient.ProductId.HasValue
                             && productIds.Contains(ingredient.ProductId.Value))
@@ -522,16 +523,16 @@
                         .Distinct()
                         .ToListAsync();
 
-                    var productsToDelete = await DbContext.Products
+                    var productsToDelete = await db.Products
                         .Where(product => productIds.Contains(product.Id)
                             && !productIdsUsedElsewhere.Contains(product.Id))
                         .ToListAsync();
-                    DbContext.Products.RemoveRange(productsToDelete);
+                    db.Products.RemoveRange(productsToDelete);
                 }
             }
 
-            DbContext.Recipes.Remove(recipe);
-            await DbContext.SaveChangesAsync();
+            db.Recipes.Remove(recipe);
+            await db.SaveChangesAsync();
 
             selectedRecipe = null;
             CancelDelete();
@@ -540,14 +541,14 @@
         }
         catch (DbUpdateException)
         {
-            DbContext.ChangeTracker.Clear();
             deleteError = "The recipe could not be deleted because it is still referenced by other data.";
         }
     }
 
     private async Task LoadProductsAsync()
     {
-        products = await DbContext.Products
+        await using var db = DbFactory.CreateDbContext();
+        products = await db.Products
             .AsNoTracking()
             .OrderBy(product => product.Name)
             .ToListAsync();
@@ -555,7 +556,8 @@
 
     private async Task LoadRecipesAsync()
     {
-        recipes = await DbContext.Recipes
+        await using var db = DbFactory.CreateDbContext();
+        recipes = await db.Recipes
             .AsNoTracking()
             .Include(recipe => recipe.Ingredients)
             .Include(recipe => recipe.RecipeTags)

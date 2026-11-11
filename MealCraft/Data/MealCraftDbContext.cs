@@ -1,11 +1,11 @@
 using MealCraft.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace MealCraft.Data;
 
-public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : DbContext(options)
+public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeTag> RecipeTags => Set<RecipeTag>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
@@ -14,10 +14,14 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<GroceryListItem> GroceryListItems => Set<GroceryListItem>();
     public DbSet<GroceryItemSource> GroceryItemSources => Set<GroceryItemSource>();
+    public DbSet<StandaloneGroceryItem> StandaloneGroceryItems => Set<StandaloneGroceryItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ApplicationUser>()
+            .ToTable("Users");
 
         modelBuilder.Entity<ApplicationUser>()
             .HasIndex(user => user.Email)
@@ -96,14 +100,27 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasOne(source => source.PlannedMeal)
             .WithMany(meal => meal.GroceryItemSources)
             .HasForeignKey(source => source.PlannedMealId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<GroceryItemSource>()
             .HasOne(source => source.RecipeIngredient)
             .WithMany(ingredient => ingredient.GroceryItemSources)
             .HasForeignKey(source => source.RecipeIngredientId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .Property(item => item.Name)
+            .HasMaxLength(80)
+            .IsRequired();
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .Property(item => item.Quantity)
+            .HasMaxLength(40)
+            .IsRequired();
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .Property(item => item.Category)
+            .HasMaxLength(40)
+            .IsRequired();
     }
 }

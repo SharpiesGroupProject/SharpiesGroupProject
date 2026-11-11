@@ -1,4 +1,8 @@
 @page "/register"
+@using System.ComponentModel.DataAnnotations
+@using MealCraft.Models
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
 
 <PageTitle>Registration - MealCraft</PageTitle>
 
@@ -11,17 +15,46 @@
           <div class="card-body p-4">
             <h1 class="h3 text-center mb-4">Registration</h1>
 
-            <div class="mb-3">
-              <label for="email" class="form-label">Email</label>
-              <input type="email" class="form-control" id="email" placeholder="Enter your email">
-            </div>
+            <EditForm Model="Input" FormName="register" OnValidSubmit="RegisterUser">
+              <DataAnnotationsValidator />
 
-            <div class="mb-3">
-              <label for="password" class="form-label">Password</label>
-              <input type="password" class="form-control" id="password" placeholder="Enter your password">
-            </div>
+              @if (!string.IsNullOrEmpty(SuccessMessage))
+              {
+                  <div class="alert alert-success" role="status">
+                      @SuccessMessage
+                  </div>
+              }
 
-            <button type="button" class="btn btn-primary w-100">Register</button>
+              @if (ErrorMessages.Count > 0)
+              {
+                  <div class="alert alert-danger" role="alert">
+                      @foreach (var error in ErrorMessages)
+                      {
+                          <div>@error</div>
+                      }
+                  </div>
+              }
+
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText type="email" class="form-control" id="email" placeholder="Enter your email" @bind-Value="Input!.Email" />
+                <ValidationMessage For="() => Input.Email" />
+              </div>
+
+              <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText type="password" class="form-control" id="password" placeholder="Enter your password" @bind-Value="Input!.Password" />
+                <ValidationMessage For="() => Input.Password" />
+              </div>
+
+              <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <InputText type="password" class="form-control" id="confirmPassword" placeholder="Confirm your password" @bind-Value="Input!.ConfirmPassword" />
+                <ValidationMessage For="() => Input.ConfirmPassword" />
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100">Register</button>
+            </EditForm>
 
             <p class="text-center mt-3 mb-0">
               Already have an account? <a href="/login">Login Here</a>
@@ -33,3 +66,61 @@
     </div>
   </div>
 </div>
+
+@code {
+    private string? SuccessMessage;
+    private List<string> ErrorMessages = new();
+
+    [SupplyParameterFromForm]
+    private RegistrationInput? Input { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    private async Task RegisterUser()
+    {
+        SuccessMessage = null;
+        ErrorMessages.Clear();
+
+        if (Input is null)
+        {
+            ErrorMessages.Add("Registration information is missing.");
+            return;
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = Input.Email.Trim(),
+            Email = Input.Email.Trim()
+        };
+
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (result.Succeeded)
+        {
+            SuccessMessage = "Registration successful! Your account has been created.";
+        }
+        else
+        {
+            ErrorMessages = result.Errors
+                .Select(error => error.Description)
+                .ToList();
+        }
+    }
+
+    private sealed class RegistrationInput
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required.")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Please confirm your password.")]
+        [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}
