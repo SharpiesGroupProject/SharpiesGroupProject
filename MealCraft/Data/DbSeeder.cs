@@ -5,6 +5,7 @@ namespace MealCraft.Data;
 
 public static class DbSeeder
 {
+    public const string DemoName = "DemoUser";
     public const string DemoEmail = "demo@mealcraft.local";
 
     public static async Task SeedAsync(
@@ -30,7 +31,11 @@ public static class DbSeeder
 
         var user = new ApplicationUser
         {
-            Email = DemoEmail
+            UserName = DemoName,
+            NormalizedUserName = DemoName.ToUpperInvariant(),
+            Email = DemoEmail,
+            NormalizedEmail = DemoEmail.ToUpperInvariant(),
+            EmailConfirmed = true
         };
 
         var recipe = new Recipe
