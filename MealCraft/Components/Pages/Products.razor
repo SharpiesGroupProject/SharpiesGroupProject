@@ -1,0 +1,98 @@
+@page "/products"
+@using MealCraft.Data
+@using MealCraft.Models
+@using Microsoft.EntityFrameworkCore
+@inject MealCraftDbContext DbContext
+
+<PageTitle>Products - MealCraft</PageTitle>
+
+<h1>Products</h1>
+<p class="text-muted">Product catalog loaded directly from the database.</p>
+
+@if (products is null)
+{
+    <p role="status">Loading products...</p>
+}
+else{
+    <section class="card card-body mb-4" aria-labelledby="add-product-heading">
+        <h2 id="add-product-heading" class="h4">Add a product</h2>
+        <form @onsubmit="AddProduct" @onsubmit:preventDefault>
+            <div class="mb-3">
+                <label for="product-name" class="form-label">Name</label>
+                <input id="product-name" class="form-control" @bind="newProduct.Name" />
+            </div>
+            <div class="mb-3">
+                <label for="product-category" class="form-label">Category</label>
+                <input id="product-category" class="form-control" @bind="newProduct.Category" />
+            </div>
+            <div class="mb-3">
+                <label for="product-unit" class="form-label">Default unit</label>
+                <input id="product-unit" class="form-control" @bind="newProduct.DefaultUnit" />
+            </div>
+            <button type="submit" class="btn btn-primary">Add product</button>
+        </form>
+
+        @if (feedbackMessage is not null)
+        {
+            <p class="alert alert-success mt-3 mb-0" role="status">@feedbackMessage</p>
+        }
+    </section>
+
+    @if (products.Count == 0)
+    {
+        <p>No products were found in the database.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Default unit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr @key="product.Id">
+                            <td>@product.Id</td>
+                            <td>@product.Name</td>
+                            <td>@(product.Category ?? "-")</td>
+                            <td>@(product.DefaultUnit ?? "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<Product>? products;
+    private Product newProduct = new();
+    private string? feedbackMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await DbContext.Products
+            .AsNoTracking()
+            .OrderBy(product => product.Name)
+            .ToListAsync();
+    }
+
+    private async Task AddProduct()
+    {
+        DbContext.Products.Add(newProduct);
+        await DbContext.SaveChangesAsync();
+
+        feedbackMessage = $"{newProduct.Name} added.";
+        newProduct = new Product();
+        products = await DbContext.Products
+            .AsNoTracking()
+            .OrderBy(product => product.Name)
+            .ToListAsync();
+    }
+}
