@@ -9,6 +9,7 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeTag> RecipeTags => Set<RecipeTag>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
+    public DbSet<Product> Products => Set<Product>();
     public DbSet<MealPlan> MealPlans => Set<MealPlan>();
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<GroceryListItem> GroceryListItems => Set<GroceryListItem>();
@@ -43,6 +44,13 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasForeignKey(ingredient => ingredient.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Ingredient>()
+            .HasOne(ingredient => ingredient.Product)
+            .WithMany(product => product.RecipeIngredients)
+            .HasForeignKey(ingredient => ingredient.ProductId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<MealPlan>()
             .HasOne(plan => plan.User)
             .WithMany(user => user.MealPlans)
@@ -71,6 +79,13 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasForeignKey(item => item.MealPlanId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<GroceryListItem>()
+            .HasOne(item => item.Product)
+            .WithMany(product => product.GroceryListItems)
+            .HasForeignKey(item => item.ProductId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<GroceryItemSource>()
             .HasOne(source => source.GroceryListItem)
             .WithMany(item => item.Sources)
@@ -81,12 +96,14 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasOne(source => source.PlannedMeal)
             .WithMany(meal => meal.GroceryItemSources)
             .HasForeignKey(source => source.PlannedMealId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<GroceryItemSource>()
             .HasOne(source => source.RecipeIngredient)
             .WithMany(ingredient => ingredient.GroceryItemSources)
             .HasForeignKey(source => source.RecipeIngredientId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
