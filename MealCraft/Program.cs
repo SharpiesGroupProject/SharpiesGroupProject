@@ -1,12 +1,32 @@
 using MealCraft.Components;
 using MealCraft.Data;
+using MealCraft.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Factory (also registers a scoped context) so Blazor Server components get short-lived contexts.
+// Configure SQLite database.
 builder.Services.AddDbContextFactory<MealCraftDbContext>(options =>
     options.UseSqlite("Data Source=mealcraft.db"));
+
+// Configure ASP.NET Core Identity.
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+    options.User.RequireUniqueEmail = true;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<MealCraftDbContext>()
+.AddSignInManager();
+
+// Configure authentication and authorization.
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+    .AddIdentityCookies();
+
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -28,6 +48,9 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

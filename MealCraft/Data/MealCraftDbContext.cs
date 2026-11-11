@@ -1,11 +1,11 @@
 using MealCraft.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace MealCraft.Data;
 
-public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : DbContext(options)
-{
-    public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
+public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+{   
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeTag> RecipeTags => Set<RecipeTag>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
@@ -17,6 +17,9 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ApplicationUser>()
+            .ToTable("Users");
 
         modelBuilder.Entity<ApplicationUser>()
             .HasIndex(user => user.Email)
