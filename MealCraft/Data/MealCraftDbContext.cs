@@ -13,6 +13,7 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<GroceryListItem> GroceryListItems => Set<GroceryListItem>();
     public DbSet<GroceryItemSource> GroceryItemSources => Set<GroceryItemSource>();
+    public DbSet<StandaloneGroceryItem> StandaloneGroceryItems => Set<StandaloneGroceryItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -91,5 +92,20 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .WithMany(ingredient => ingredient.GroceryItemSources)
             .HasForeignKey(source => source.RecipeIngredientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .Property(item => item.Name)
+            .HasMaxLength(80)
+            .IsRequired();
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .Property(item => item.Quantity)
+            .HasMaxLength(40)
+            .IsRequired();
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .Property(item => item.Category)
+            .HasMaxLength(40)
+            .IsRequired();
     }
 }

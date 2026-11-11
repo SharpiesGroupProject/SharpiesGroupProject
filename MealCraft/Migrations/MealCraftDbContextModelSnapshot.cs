@@ -290,6 +290,35 @@ namespace MealCraft.Migrations
                     b.ToTable("RecipeTags");
                 });
 
+            modelBuilder.Entity("MealCraft.Models.StandaloneGroceryItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPurchased")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Quantity")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StandaloneGroceryItems");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -414,7 +443,6 @@ namespace MealCraft.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
-
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
