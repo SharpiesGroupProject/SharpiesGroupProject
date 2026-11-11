@@ -67,6 +67,9 @@ artifacts/
 
 # Local SQLite database
 /MealCraft/mealcraft.db
+/MealCraft/mealcraft.db-wal
+/MealCraft/mealcraft.db-shm
+/MealCraft/mealcraft.db-journal
 
 # Tye
 .tye/
