@@ -26,7 +26,7 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <h2 class="h4">New Recipe</h2>
+        <h2 class="h4">@(isEditing ? "Edit Recipe" : "New Recipe")</h2>
 
         <div class="mb-3">
             <label class="form-label">Title</label>
@@ -133,7 +133,7 @@
         }
 
         <div>
-            <button type="submit" class="btn btn-success me-2">Save</button>
+            <button type="submit" class="btn btn-success me-2">@(isEditing ? "Update" : "Save")</button>
             <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancel</button>
         </div>
     </EditForm>
@@ -152,7 +152,8 @@
                 {
                     <button type="button"
                             class="list-group-item list-group-item-action @(selectedRecipe == recipe ? "active" : "")"
-                            @onclick="() => selectedRecipe = recipe">
+                            @onclick="() => SelectRecipe(recipe)"
+                            disabled="@showForm">
                         <div class="fw-bold">@recipe.Title</div>
                         <small>@string.Join(", ", recipe.Tags)</small>
                     </button>
@@ -169,6 +170,31 @@
         else
         {
             <h2>@selectedRecipe.Title</h2>
+            <button type="button" class="btn btn-outline-primary btn-sm me-2 mb-3" @onclick="StartEditing">Edit recipe</button>
+            <button type="button" class="btn btn-outline-danger btn-sm mb-3" @onclick="ShowDeleteOptions">Delete recipe</button>
+
+            @if (showDeleteOptions)
+            {
+                <div class="card card-body border-danger mb-3">
+                    <p class="mb-2">Delete "@selectedRecipe.Title"? Its recipe-specific ingredient rows will be removed.</p>
+                    <div class="form-check mb-3">
+                        <InputCheckbox id="delete-unused-products" class="form-check-input" @bind-Value="deleteUnusedProducts" />
+                        <label class="form-check-label" for="delete-unused-products">
+                            Also delete catalog products used only by this recipe
+                        </label>
+                        <div class="form-text">Products used by other recipes will be kept. Leave unchecked to keep all catalog products.</div>
+                    </div>
+                    @if (deleteError is not null)
+                    {
+                        <div class="alert alert-danger" role="alert">@deleteError</div>
+                    }
+                    <div>
+                        <button type="button" class="btn btn-danger me-2" @onclick="DeleteSelectedRecipeAsync">Confirm delete</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    </div>
+                </div>
+            }
+
             <p>@selectedRecipe.Description</p>
             <p>
                 Prep: @selectedRecipe.PrepTimeMinutes min |
@@ -208,6 +234,10 @@
     private int? selectedProductId;
     private string? formError;
     private bool showForm;
+    private bool isEditing;
+    private bool showDeleteOptions;
+    private bool deleteUnusedProducts;
+    private string? deleteError;
     private string? userId;
 
     private IEnumerable<Product> FilteredProducts => products
@@ -229,6 +259,8 @@
     {
         newRecipe = new Recipe();
         newRecipe.Ingredients.Add(new Ingredient());
+        CancelDelete();
+        isEditing = false;
         tagInput = string.Empty;
         productSearch = string.Empty;
         selectedProductUnit = string.Empty;
@@ -238,7 +270,67 @@
         showForm = true;
     }
 
-    private void CloseForm() => showForm = false;
+    private void StartEditing()
+    {
+        if (selectedRecipe is null)
+        {
+            return;
+        }
+
+        newRecipe = new Recipe
+        {
+            Id = selectedRecipe.Id,
+            Title = selectedRecipe.Title,
+            Description = selectedRecipe.Description,
+            PrepTimeMinutes = selectedRecipe.PrepTimeMinutes,
+            CookTimeMinutes = selectedRecipe.CookTimeMinutes,
+            Servings = selectedRecipe.Servings,
+            Instructions = selectedRecipe.Instructions,
+            Ingredients = selectedRecipe.Ingredients.Select(ingredient => new Ingredient
+            {
+                Name = ingredient.Name,
+                ProductId = ingredient.ProductId,
+                Quantity = ingredient.Quantity,
+                Unit = ingredient.Unit,
+                DisplayOrder = ingredient.DisplayOrder
+            }).ToList()
+        };
+        tagInput = string.Join(", ", selectedRecipe.Tags);
+        productSearch = string.Empty;
+        selectedProductUnit = string.Empty;
+        selectedProductQuantity = 0;
+        selectedProductId = null;
+        formError = null;
+        isEditing = true;
+        showForm = true;
+        CancelDelete();
+    }
+
+    private void CloseForm()
+    {
+        showForm = false;
+        isEditing = false;
+    }
+
+    private void SelectRecipe(Recipe recipe)
+    {
+        selectedRecipe = recipe;
+        CancelDelete();
+    }
+
+    private void ShowDeleteOptions()
+    {
+        showDeleteOptions = true;
+        deleteUnusedProducts = false;
+        deleteError = null;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteOptions = false;
+        deleteUnusedProducts = false;
+        deleteError = null;
+    }
 
     private void AddIngredient() => newRecipe.Ingredients.Add(new Ingredient());
 
@@ -283,7 +375,7 @@
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
 
-        if (userId is null)
+        if (!isEditing && userId is null)
         {
             formError = "The demo user account was not found. The recipe could not be saved.";
             return;
@@ -317,21 +409,140 @@
             ingredient.Product = newProduct;
         }
 
-        newRecipe.UserId = userId;
         for (var index = 0; index < newRecipe.Ingredients.Count; index++)
         {
             newRecipe.Ingredients[index].DisplayOrder = index + 1;
         }
 
-        DbContext.Products.AddRange(productsToAdd);
-        DbContext.Recipes.Add(newRecipe);
-        await DbContext.SaveChangesAsync();
+        try
+        {
+            DbContext.Products.AddRange(productsToAdd);
 
-        var savedRecipeId = newRecipe.Id;
-        await LoadRecipesAsync();
-        await LoadProductsAsync();
-        selectedRecipe = recipes.Single(recipe => recipe.Id == savedRecipeId);
-        showForm = false;
+            Recipe recipeToSave;
+            if (isEditing)
+            {
+                recipeToSave = await DbContext.Recipes
+                    .Include(recipe => recipe.Ingredients)
+                    .Include(recipe => recipe.RecipeTags)
+                    .SingleAsync(recipe => recipe.Id == newRecipe.Id);
+
+                recipeToSave.Title = newRecipe.Title;
+                recipeToSave.Description = newRecipe.Description;
+                recipeToSave.PrepTimeMinutes = newRecipe.PrepTimeMinutes;
+                recipeToSave.CookTimeMinutes = newRecipe.CookTimeMinutes;
+                recipeToSave.Servings = newRecipe.Servings;
+                recipeToSave.Instructions = newRecipe.Instructions;
+
+                DbContext.RecipeIngredients.RemoveRange(recipeToSave.Ingredients);
+                recipeToSave.Ingredients.Clear();
+                recipeToSave.Ingredients.AddRange(newRecipe.Ingredients);
+
+                var desiredTags = newRecipe.Tags.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                foreach (var existingTag in recipeToSave.RecipeTags.ToList())
+                {
+                    if (!desiredTags.Contains(existingTag.TagName, StringComparer.OrdinalIgnoreCase))
+                    {
+                        recipeToSave.RecipeTags.Remove(existingTag);
+                        DbContext.RecipeTags.Remove(existingTag);
+                    }
+                }
+
+                foreach (var tag in desiredTags)
+                {
+                    if (!recipeToSave.RecipeTags.Any(existingTag =>
+                            string.Equals(existingTag.TagName, tag, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        recipeToSave.RecipeTags.Add(new RecipeTag { TagName = tag });
+                    }
+                }
+            }
+            else
+            {
+                newRecipe.UserId = userId!;
+                recipeToSave = newRecipe;
+                DbContext.Recipes.Add(recipeToSave);
+            }
+
+            await DbContext.SaveChangesAsync();
+
+            var savedRecipeId = recipeToSave.Id;
+            await LoadRecipesAsync();
+            await LoadProductsAsync();
+            selectedRecipe = recipes.Single(recipe => recipe.Id == savedRecipeId);
+            CloseForm();
+        }
+        catch (DbUpdateException)
+        {
+            DbContext.ChangeTracker.Clear();
+            formError = "The recipe could not be saved because of a database error. Please review the recipe and try again.";
+        }
+    }
+
+    private async Task DeleteSelectedRecipeAsync()
+    {
+        if (selectedRecipe is null)
+        {
+            return;
+        }
+
+        var recipeId = selectedRecipe.Id;
+        if (await DbContext.PlannedMeals.AnyAsync(meal => meal.RecipeId == recipeId))
+        {
+            deleteError = "This recipe is used in a meal plan and cannot be deleted until it is removed from the plan.";
+            return;
+        }
+
+        var recipe = await DbContext.Recipes
+            .Include(candidate => candidate.Ingredients)
+            .Include(candidate => candidate.RecipeTags)
+            .SingleOrDefaultAsync(candidate => candidate.Id == recipeId);
+        if (recipe is null)
+        {
+            deleteError = "This recipe could not be found in the database. Reload the page and try again.";
+            return;
+        }
+
+        try
+        {
+            if (deleteUnusedProducts)
+            {
+                var productIds = recipe.Ingredients
+                    .Where(ingredient => ingredient.ProductId is not null)
+                    .Select(ingredient => ingredient.ProductId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                if (productIds.Count > 0)
+                {
+                    var productIdsUsedElsewhere = await DbContext.RecipeIngredients
+                        .Where(ingredient => ingredient.RecipeId != recipeId
+                            && ingredient.ProductId.HasValue
+                            && productIds.Contains(ingredient.ProductId.Value))
+                        .Select(ingredient => ingredient.ProductId!.Value)
+                        .Distinct()
+                        .ToListAsync();
+
+                    var productsToDelete = await DbContext.Products
+                        .Where(product => productIds.Contains(product.Id)
+                            && !productIdsUsedElsewhere.Contains(product.Id))
+                        .ToListAsync();
+                    DbContext.Products.RemoveRange(productsToDelete);
+                }
+            }
+
+            DbContext.Recipes.Remove(recipe);
+            await DbContext.SaveChangesAsync();
+
+            selectedRecipe = null;
+            CancelDelete();
+            await LoadRecipesAsync();
+            await LoadProductsAsync();
+        }
+        catch (DbUpdateException)
+        {
+            DbContext.ChangeTracker.Clear();
+            deleteError = "The recipe could not be deleted because it is still referenced by other data.";
+        }
     }
 
     private async Task LoadProductsAsync()
