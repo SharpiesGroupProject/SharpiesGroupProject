@@ -93,13 +93,13 @@ namespace MealCraft.Migrations
                     b.Property<int>("GroceryListItemId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("PlannedMealId")
+                    b.Property<int?>("PlannedMealId")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("RecipeIngredientId")
+                    b.Property<int?>("RecipeIngredientId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Unit")
@@ -136,6 +136,9 @@ namespace MealCraft.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("Quantity")
                         .HasColumnType("TEXT");
 
@@ -150,6 +153,8 @@ namespace MealCraft.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MealPlanId");
+
+                    b.HasIndex("ProductId");
 
                     b.ToTable("GroceryListItems");
                 });
@@ -167,6 +172,9 @@ namespace MealCraft.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ProductId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("Quantity")
                         .HasColumnType("TEXT");
 
@@ -178,6 +186,8 @@ namespace MealCraft.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("RecipeId");
 
@@ -234,6 +244,30 @@ namespace MealCraft.Migrations
                     b.HasIndex("RecipeId");
 
                     b.ToTable("PlannedMeals");
+                });
+
+            modelBuilder.Entity("MealCraft.Models.Product", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefaultUnit")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("MealCraft.Models.Recipe", b =>
@@ -457,14 +491,12 @@ namespace MealCraft.Migrations
                     b.HasOne("MealCraft.Models.PlannedMeal", "PlannedMeal")
                         .WithMany("GroceryItemSources")
                         .HasForeignKey("PlannedMealId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("MealCraft.Models.Ingredient", "RecipeIngredient")
                         .WithMany("GroceryItemSources")
                         .HasForeignKey("RecipeIngredientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("GroceryListItem");
 
@@ -481,16 +513,31 @@ namespace MealCraft.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MealCraft.Models.Product", "Product")
+                        .WithMany("GroceryListItems")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("MealPlan");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("MealCraft.Models.Ingredient", b =>
                 {
+                    b.HasOne("MealCraft.Models.Product", "Product")
+                        .WithMany("RecipeIngredients")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("MealCraft.Models.Recipe", "Recipe")
                         .WithMany("Ingredients")
                         .HasForeignKey("RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Product");
 
                     b.Navigation("Recipe");
                 });
@@ -625,6 +672,13 @@ namespace MealCraft.Migrations
             modelBuilder.Entity("MealCraft.Models.PlannedMeal", b =>
                 {
                     b.Navigation("GroceryItemSources");
+                });
+
+            modelBuilder.Entity("MealCraft.Models.Product", b =>
+                {
+                    b.Navigation("GroceryListItems");
+
+                    b.Navigation("RecipeIngredients");
                 });
 
             modelBuilder.Entity("MealCraft.Models.Recipe", b =>
