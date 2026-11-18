@@ -3,6 +3,7 @@ using MealCraft.Data;
 using MealCraft.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Antiforgery;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,15 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 // Configure authentication and authorization.
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/login";
+    options.LogoutPath = "/logout";
+    options.AccessDeniedPath = "/login";
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+});
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
@@ -57,5 +67,16 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapPost("/logout", async (
+    HttpContext context,
+    IAntiforgery antiforgery,
+    SignInManager<ApplicationUser> signInManager) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await signInManager.SignOutAsync();
+
+    return Results.LocalRedirect("/?logoutSuccess=true");
+});
 
 app.Run();

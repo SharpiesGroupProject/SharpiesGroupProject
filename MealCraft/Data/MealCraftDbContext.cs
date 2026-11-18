@@ -5,10 +5,11 @@ using Microsoft.EntityFrameworkCore;
 namespace MealCraft.Data;
 
 public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : IdentityDbContext<ApplicationUser>(options)
-{   
+{
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeTag> RecipeTags => Set<RecipeTag>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
+    public DbSet<Product> Products => Set<Product>();
     public DbSet<MealPlan> MealPlans => Set<MealPlan>();
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<GroceryListItem> GroceryListItems => Set<GroceryListItem>();
@@ -47,6 +48,13 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasForeignKey(ingredient => ingredient.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Ingredient>()
+            .HasOne(ingredient => ingredient.Product)
+            .WithMany(product => product.RecipeIngredients)
+            .HasForeignKey(ingredient => ingredient.ProductId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<MealPlan>()
             .HasOne(plan => plan.User)
             .WithMany(user => user.MealPlans)
@@ -74,6 +82,13 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .WithMany(plan => plan.GroceryListItems)
             .HasForeignKey(item => item.MealPlanId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<GroceryListItem>()
+            .HasOne(item => item.Product)
+            .WithMany(product => product.GroceryListItems)
+            .HasForeignKey(item => item.ProductId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<GroceryItemSource>()
             .HasOne(source => source.GroceryListItem)

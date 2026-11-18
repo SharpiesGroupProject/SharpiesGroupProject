@@ -8,6 +8,7 @@ public class Ingredient
 {
     public int Id { get; set; }
     public int RecipeId { get; set; }
+    public int? ProductId { get; set; }
 
     [Required]
     public string Name { get; set; } = string.Empty;
@@ -19,5 +20,6 @@ public class Ingredient
     public int DisplayOrder { get; set; }
 
     public Recipe Recipe { get; set; } = null!;
+    public Product? Product { get; set; }
     public List<GroceryItemSource> GroceryItemSources { get; set; } = new();
 }

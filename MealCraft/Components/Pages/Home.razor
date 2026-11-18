@@ -2,6 +2,44 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+@if (LoginSuccess)
+{
+    <div class="alert alert-success" role="status">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        Login successful!
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <i class="bi bi-hand-thumbs-up text-success" style="transform: scaleX(-1); display: inline-block; -webkit-text-stroke: 0.5px;"></i>
+        &nbsp;
+        <span class="text-success" style="text-decoration: underline; text-decoration-color: green; text-decoration-thickness: 3px; text-underline-offset: 6px;">
+        You now have access to MealCraft.</span>
+        &nbsp;
+        <i class="bi bi-hand-thumbs-up text-success" style="-webkit-text-stroke: 0.5px;"></i>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Welcome!!!
+    </div>
+}
 
-<Recipes/>
+@if (LogoutSuccess)
+{
+    <div class="alert alert-success" role="status">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        Logout successful!
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <i class="bi bi-person-raised-hand text-success" style="font-size: 1.5rem;"></i>
+        <span class="text-success" style="text-decoration: underline; text-decoration-color: green; text-decoration-thickness: 3px; text-underline-offset: 6px;">
+        You have been logged out of MealCraft.</span>
+        <i class="bi bi-person-raised-hand text-success" style="font-size: 1.5rem;"></i>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        See you next time!
+    </div>
+}
+
+<h1>MealCraft - Meal Planning Simplified!</h1>
+
+@code {
+    [SupplyParameterFromQuery(Name = "loginSuccess")]
+    private bool LoginSuccess { get; set; }
+
+    [SupplyParameterFromQuery(Name = "logoutSuccess")]
+    private bool LogoutSuccess { get; set; }
+}
