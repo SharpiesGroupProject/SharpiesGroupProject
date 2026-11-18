@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
             <span class="bi bi-bag-check" aria-hidden="true"></span> MealCraft
@@ -40,16 +42,36 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                <span class="bi bi-box-arrow-in-right" @aria-hidden="true"></span> Login
-            </NavLink>
-        </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="register">
-                <span class="bi bi-person-plus-fill" aria-hidden="true"></span> Registration
-            </NavLink>
-        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <form method="post" action="/logout">
+                        <AntiforgeryToken />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span>
+                            Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span>
+                        Login
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="register">
+                        <span class="bi bi-person-plus-fill" aria-hidden="true"></span>
+                        Registration
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+
     </nav>
 </div>
