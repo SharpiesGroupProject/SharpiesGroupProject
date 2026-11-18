@@ -1,9 +1,26 @@
 @page "/meal-planner"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@using MealCraft.Data
+@using MealCraft.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<MealCraftDbContext> DbFactory
+@inject ILogger<MealPlanner> Logger
 
 <PageTitle>Meal Planner - MealCraft</PageTitle>
 <h1>Weekly Meal Planner</h1>
+
+@if (userId is null)
+{
+    <div class="alert alert-danger" role="alert">
+        The demo user account was not found. Meal plans cannot be saved.
+    </div>
+}
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
 
 <div class="d-flex align-items-center gap-2 mb-3">
     <button class="btn btn-outline-secondary" @onclick="GoToPreviousWeek">&laquo; Previous Week</button>
@@ -31,22 +48,24 @@
                 @for (var i = 0; i < 7; i++)
                 {
                     var date = weekStart.AddDays(i);
-                    var assigned = plannedMeals.TryGetValue((date, slot), out var recipe) ? recipe : null;
+                    var assigned = plannedMeals.TryGetValue((date, slot), out var meal) ? meal : null;
                     var isEditing = editingCell == (date, slot);
                     <td>
                         @if (assigned is not null && !isEditing)
                         {
-                            <div>@assigned.Name</div>
+                            <div>@assigned.Recipe.Title</div>
                             <button class="btn btn-sm btn-outline-secondary me-1 mt-1" @onclick="() => StartEditing(date, slot)">Replace</button>
                             <button class="btn btn-sm btn-outline-danger mt-1" @onclick="() => RemoveMeal(date, slot)">Remove</button>
                         }
                         else
                         {
-                            <select class="form-select form-select-sm" value="@(assigned?.Id.ToString() ?? "")" @onchange="e => AssignRecipe(date, slot, e.Value?.ToString())">
+                            <select class="form-select form-select-sm" value="@(assigned?.RecipeId.ToString() ?? "")"
+                                    @onchange="e => AssignRecipe(date, slot, e.Value?.ToString())"
+                                    disabled="@(userId is null || availableRecipes.Count == 0)">
                                 <option value="">-- Select recipe --</option>
-                                @foreach (var r in SampleRecipes)
+                                @foreach (var r in availableRecipes)
                                 {
-                                    <option value="@r.Id">@r.Name</option>
+                                    <option value="@r.Id">@r.Title</option>
                                 }
                             </select>
                             @if (isEditing)
@@ -61,93 +80,190 @@
     </tbody>
 </table>
 
+@if (availableRecipes.Count == 0)
+{
+    <p class="text-muted">No recipes found. Add recipes in Recipe Management to assign them here.</p>
+}
+
 @code {
+    private const string DemoUserEmail = "demo@mealcraft.local";
     private static readonly string[] Slots = { "Breakfast", "Lunch", "Dinner" };
 
-    private sealed record SampleRecipe(int Id, string Name);
-
-    private static readonly List<SampleRecipe> SampleRecipes = new()
-    {
-        new(1, "Oatmeal"), new(2, "Turkey Wrap"), new(3, "Spaghetti"),
-        new(4, "Scrambled Eggs"), new(5, "Chicken Salad"), new(6, "Tacos"),
-        new(7, "Pancakes"), new(8, "BLT Sandwich"), new(9, "Chicken Stir Fry"),
-        new(10, "Greek Yogurt"), new(11, "Tomato Soup"), new(12, "Burgers"),
-        new(13, "Fruit Smoothie"), new(14, "Quesadilla"), new(15, "Homemade Pizza"),
-        new(16, "Waffles"), new(17, "Grilled Cheese"), new(18, "Baked Salmon"),
-        new(19, "French Toast"), new(20, "Leftovers"), new(21, "Roast Chicken"),
-    };
-
-    // Recipe ids for Breakfast/Lunch/Dinner, one row per day (Sunday through Saturday).
-    private static readonly int?[,] InitialAssignments =
-    {
-        { 19, 20, 21 }, // Sunday
-        { 1, 2, 3 },    // Monday
-        { 4, 5, 6 },    // Tuesday
-        { 7, 8, 9 },    // Wednesday
-        { 10, 11, 12 }, // Thursday
-        { 13, 14, 15 }, // Friday
-        { 16, 17, 18 }, // Saturday
-    };
-
+    private string? userId;
+    private List<Recipe> availableRecipes = [];
     private DateOnly weekStart = CurrentWeekStart;
     private (DateOnly Date, string Slot)? editingCell;
-    private readonly Dictionary<(DateOnly Date, string Slot), SampleRecipe?> plannedMeals = new();
+    private readonly Dictionary<(DateOnly Date, string Slot), PlannedMeal?> plannedMeals = new();
+    private string? errorMessage;
 
     private static DateOnly CurrentWeekStart => StartOfWeek(DateOnly.FromDateTime(DateTime.Today));
 
     private static DateOnly StartOfWeek(DateOnly date) => date.AddDays(-(int)date.DayOfWeek);
 
-    protected override void OnInitialized()
+    // The MealPlan.WeekStartDate anchor used elsewhere in the app (DbSeeder) is the Monday
+    // of the week, independent of this page's Sunday-first display.
+    private static DateTime MealPlanWeekAnchor(DateOnly date) =>
+        date.AddDays(-(((int)date.DayOfWeek + 6) % 7)).ToDateTime(TimeOnly.MinValue);
+
+    protected override async Task OnInitializedAsync()
     {
-        for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+        await using var db = DbFactory.CreateDbContext();
+        userId = await db.Users
+            .Where(user => user.Email == DemoUserEmail)
+            .Select(user => user.Id)
+            .SingleOrDefaultAsync();
+
+        availableRecipes = await db.Recipes
+            .AsNoTracking()
+            .OrderBy(r => r.Title)
+            .ToListAsync();
+
+        await LoadWeekAsync();
+    }
+
+    private async Task LoadWeekAsync()
+    {
+        plannedMeals.Clear();
+        if (userId is null)
         {
-            var date = weekStart.AddDays(dayIndex);
-            for (var slotIndex = 0; slotIndex < Slots.Length; slotIndex++)
+            return;
+        }
+
+        try
+        {
+            await using var db = DbFactory.CreateDbContext();
+            var rangeStart = weekStart.ToDateTime(TimeOnly.MinValue);
+            var rangeEnd = weekStart.AddDays(6).ToDateTime(TimeOnly.MinValue);
+
+            var meals = await db.PlannedMeals
+                .AsNoTracking()
+                .Include(meal => meal.Recipe)
+                .Where(meal => meal.MealPlan.UserId == userId
+                    && meal.MealDate >= rangeStart && meal.MealDate <= rangeEnd)
+                .ToListAsync();
+
+            foreach (var meal in meals)
             {
-                if (InitialAssignments[dayIndex, slotIndex] is int recipeId)
-                {
-                    plannedMeals[(date, Slots[slotIndex])] = SampleRecipes.First(r => r.Id == recipeId);
-                }
+                plannedMeals[(DateOnly.FromDateTime(meal.MealDate), meal.MealType)] = meal;
             }
+
+            errorMessage = null;
+        }
+        catch (DbUpdateException ex)
+        {
+            Logger.LogError(ex, "Failed to load planned meals for week {WeekStart}.", weekStart);
+            errorMessage = "Unable to load your meal plan. Please try again.";
         }
     }
 
-    private void GoToPreviousWeek()
+    private async Task GoToPreviousWeek()
     {
         weekStart = weekStart.AddDays(-7);
         editingCell = null;
+        await LoadWeekAsync();
     }
 
-    private void GoToNextWeek()
+    private async Task GoToNextWeek()
     {
         weekStart = weekStart.AddDays(7);
         editingCell = null;
+        await LoadWeekAsync();
     }
 
-    private void GoToCurrentWeek()
+    private async Task GoToCurrentWeek()
     {
         weekStart = CurrentWeekStart;
         editingCell = null;
+        await LoadWeekAsync();
     }
 
     private void StartEditing(DateOnly date, string slot) => editingCell = (date, slot);
 
-    private void AssignRecipe(DateOnly date, string slot, string? value)
+    private async Task AssignRecipe(DateOnly date, string slot, string? value)
     {
-        if (int.TryParse(value, out var id))
-        {
-            var recipe = SampleRecipes.FirstOrDefault(r => r.Id == id);
-            if (recipe is not null)
-            {
-                plannedMeals[(date, slot)] = recipe;
-            }
-        }
         editingCell = null;
+
+        if (userId is null || !int.TryParse(value, out var recipeId))
+        {
+            return;
+        }
+
+        try
+        {
+            await using var db = DbFactory.CreateDbContext();
+            var planWeekStart = MealPlanWeekAnchor(date);
+
+            var mealPlan = await db.MealPlans
+                .FirstOrDefaultAsync(plan => plan.UserId == userId && plan.WeekStartDate == planWeekStart);
+            if (mealPlan is null)
+            {
+                mealPlan = new MealPlan { UserId = userId, WeekStartDate = planWeekStart, IsActive = true };
+                db.MealPlans.Add(mealPlan);
+                await db.SaveChangesAsync();
+            }
+
+            var mealDate = date.ToDateTime(TimeOnly.MinValue);
+            var existing = await db.PlannedMeals
+                .FirstOrDefaultAsync(meal => meal.MealPlanId == mealPlan.Id
+                    && meal.MealDate == mealDate && meal.MealType == slot);
+
+            if (existing is not null)
+            {
+                existing.RecipeId = recipeId;
+            }
+            else
+            {
+                db.PlannedMeals.Add(new PlannedMeal
+                {
+                    MealPlanId = mealPlan.Id,
+                    RecipeId = recipeId,
+                    MealDate = mealDate,
+                    MealType = slot
+                });
+            }
+
+            await db.SaveChangesAsync();
+            errorMessage = null;
+        }
+        catch (DbUpdateException ex)
+        {
+            Logger.LogError(ex, "Failed to save planned meal for {MealDate} {Slot}.", date, slot);
+            errorMessage = "Unable to save that meal. Please try again.";
+        }
+
+        await LoadWeekAsync();
     }
 
-    private void RemoveMeal(DateOnly date, string slot)
+    private async Task RemoveMeal(DateOnly date, string slot)
     {
-        plannedMeals.Remove((date, slot));
         editingCell = null;
+        if (userId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var db = DbFactory.CreateDbContext();
+            var mealDate = date.ToDateTime(TimeOnly.MinValue);
+            var existing = await db.PlannedMeals
+                .FirstOrDefaultAsync(meal => meal.MealPlan.UserId == userId
+                    && meal.MealDate == mealDate && meal.MealType == slot);
+
+            if (existing is not null)
+            {
+                db.PlannedMeals.Remove(existing);
+                await db.SaveChangesAsync();
+            }
+
+            errorMessage = null;
+        }
+        catch (DbUpdateException ex)
+        {
+            Logger.LogError(ex, "Failed to remove planned meal for {MealDate} {Slot}.", date, slot);
+            errorMessage = "Unable to remove that meal. Please try again.";
+        }
+
+        await LoadWeekAsync();
     }
 }
