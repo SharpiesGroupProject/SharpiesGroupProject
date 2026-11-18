@@ -427,7 +427,7 @@
             {
                 recipeToSave = await db.Recipes
                     .Include(recipe => recipe.RecipeTags)
-                    .SingleAsync(recipe => recipe.Id == newRecipe.Id && recipe.UserId == userId);
+                    .SingleAsync(recipe => recipe.Id == newRecipe.Id);
 
                 recipeToSave.Title = newRecipe.Title;
                 recipeToSave.Description = newRecipe.Description;
@@ -494,7 +494,7 @@
         var recipe = await db.Recipes
             .Include(candidate => candidate.Ingredients)
             .Include(candidate => candidate.RecipeTags)
-            .SingleOrDefaultAsync(candidate => candidate.Id == recipeId && candidate.UserId == userId);
+            .SingleOrDefaultAsync(candidate => candidate.Id == recipeId);
         if (recipe is null)
         {
             deleteError = "This recipe could not be found in the database. Reload the page and try again.";
@@ -557,7 +557,6 @@
         await using var db = DbFactory.CreateDbContext();
         recipes = await db.Recipes
             .AsNoTracking()
-            .Where(recipe => recipe.UserId == userId)
             .Include(recipe => recipe.RecipeTags)
             .OrderBy(recipe => recipe.Title)
             .ToListAsync();
