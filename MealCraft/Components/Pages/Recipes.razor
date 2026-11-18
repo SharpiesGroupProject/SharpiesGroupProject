@@ -57,6 +57,8 @@
             </div>
         </div>
 
+        @if (!isEditing)
+        {
         <h3 class="h5">Ingredients</h3>
         <div class="card card-body mb-3">
             <label for="product-search" class="form-label">Add an existing product</label>
@@ -122,6 +124,11 @@
         <div class="mb-3">
             <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddIngredient">Add ingredient</button>
         </div>
+        }
+        else
+        {
+            <p class="form-text">Ingredients are edited in the Ingredients panel next to the recipe.</p>
+        }
 
         <div class="mb-3">
             <label class="form-label">Cooking instructions (one step per line)</label>
@@ -203,13 +210,7 @@
                 Serves: @selectedRecipe.Servings
             </p>
 
-            <h3 class="h5">Ingredients</h3>
-            <ul>
-                @foreach (var ingredient in selectedRecipe.Ingredients)
-                {
-                    <li>@ingredient.Quantity @ingredient.Unit @ingredient.Name</li>
-                }
-            </ul>
+            <RecipeIngredientManager RecipeId="selectedRecipe.Id" OnChanged="OnIngredientsChangedAsync" />
 
             <h3 class="h5">Instructions</h3>
             <ol>
@@ -287,15 +288,7 @@
             PrepTimeMinutes = selectedRecipe.PrepTimeMinutes,
             CookTimeMinutes = selectedRecipe.CookTimeMinutes,
             Servings = selectedRecipe.Servings,
-            Instructions = selectedRecipe.Instructions,
-            Ingredients = selectedRecipe.Ingredients.Select(ingredient => new Ingredient
-            {
-                Name = ingredient.Name,
-                ProductId = ingredient.ProductId,
-                Quantity = ingredient.Quantity,
-                Unit = ingredient.Unit,
-                DisplayOrder = ingredient.DisplayOrder
-            }).ToList()
+            Instructions = selectedRecipe.Instructions
         };
         tagInput = string.Join(", ", selectedRecipe.Tags);
         productSearch = string.Empty;
@@ -365,12 +358,21 @@
 
     private async Task SaveRecipeAsync()
     {
-        // Drop blank ingredient rows before validating.
-        newRecipe.Ingredients.RemoveAll(i => string.IsNullOrWhiteSpace(i.Name));
-        if (newRecipe.Ingredients.Count == 0)
+        // Drop blank ingredient rows before validating. Existing recipes manage ingredients in RecipeIngredientManager.
+        if (!isEditing)
         {
-            formError = "Add at least one ingredient.";
-            return;
+            newRecipe.Ingredients.RemoveAll(i => string.IsNullOrWhiteSpace(i.Name));
+            if (newRecipe.Ingredients.Count == 0)
+            {
+                formError = "Add at least one ingredient.";
+                return;
+            }
+
+            if (newRecipe.Ingredients.Any(i => i.Quantity <= 0))
+            {
+                formError = "Each ingredient needs a quantity greater than 0.";
+                return;
+            }
         }
 
         newRecipe.Tags = tagInput
@@ -425,7 +427,6 @@
             if (isEditing)
             {
                 recipeToSave = await db.Recipes
-                    .Include(recipe => recipe.Ingredients)
                     .Include(recipe => recipe.RecipeTags)
                     .SingleAsync(recipe => recipe.Id == newRecipe.Id);
 
@@ -435,10 +436,6 @@
                 recipeToSave.CookTimeMinutes = newRecipe.CookTimeMinutes;
                 recipeToSave.Servings = newRecipe.Servings;
                 recipeToSave.Instructions = newRecipe.Instructions;
-
-                db.RecipeIngredients.RemoveRange(recipeToSave.Ingredients);
-                recipeToSave.Ingredients.Clear();
-                recipeToSave.Ingredients.AddRange(newRecipe.Ingredients);
 
                 var desiredTags = newRecipe.Tags.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 foreach (var existingTag in recipeToSave.RecipeTags.ToList())
@@ -561,10 +558,17 @@
         await using var db = DbFactory.CreateDbContext();
         recipes = await db.Recipes
             .AsNoTracking()
-            .Include(recipe => recipe.Ingredients)
             .Include(recipe => recipe.RecipeTags)
             .OrderBy(recipe => recipe.Title)
             .ToListAsync();
+    }
+
+    private async Task OnIngredientsChangedAsync()
+    {
+        var selectedId = selectedRecipe?.Id;
+        await LoadRecipesAsync();
+        await LoadProductsAsync();
+        selectedRecipe = recipes.FirstOrDefault(recipe => recipe.Id == selectedId);
     }
 
     private static IEnumerable<string> SplitSteps(string instructions) =>
