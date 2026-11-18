@@ -58,7 +58,8 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MealCraftDbContext>();
-    await DbSeeder.SeedAsync(dbContext);
+    // Migrations always run; demo data is only seeded in Development.
+    await DbSeeder.SeedAsync(dbContext, seedDemoData: app.Environment.IsDevelopment());
 }
 
 // Configure the HTTP request pipeline.
