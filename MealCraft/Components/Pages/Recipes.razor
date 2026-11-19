@@ -3,6 +3,7 @@
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
 @inject IDbContextFactory<MealCraftDbContext> DbFactory
 <PageTitle>Recipes - MealCraft</PageTitle>
 
@@ -22,14 +23,15 @@
 
 @if (showForm)
 {
-    <EditForm Model="newRecipe" OnValidSubmit="SaveRecipeAsync" FormName="addRecipe" class="card card-body mb-4">
+    <EditForm Model="newRecipe" OnValidSubmit="SaveRecipeAsync" OnInvalidSubmit="HandleInvalidSubmit"
+              FormName="addRecipe" class="card card-body mb-4">
         <DataAnnotationsValidator />
-        <ValidationSummary />
 
         <h2 class="h4">@(isEditing ? "Edit Recipe" : "New Recipe")</h2>
+        <p class="form-text"><span class="text-danger" aria-hidden="true">*</span> Required</p>
 
         <div class="mb-3">
-            <label class="form-label">Title</label>
+            <label class="form-label">Title <span class="text-danger" aria-hidden="true">*</span></label>
             <InputText class="form-control" @bind-Value="newRecipe.Title" />
         </div>
         <div class="mb-3">
@@ -72,10 +74,6 @@
                 <button type="button" class="btn btn-outline-secondary" @onclick="AddNewTag">Add new tag</button>
             </div>
             <div class="form-text">New tags are saved with this recipe and then available for your other recipes.</div>
-            @if (tagError is not null)
-            {
-                <div class="text-danger mt-1" role="alert">@tagError</div>
-            }
         </div>
 
         <div class="row mb-3">
@@ -88,12 +86,13 @@
                 <InputNumber class="form-control" @bind-Value="newRecipe.CookTimeMinutes" />
             </div>
             <div class="col-md-4">
-                <label class="form-label">Servings</label>
+                <label class="form-label">Servings <span class="text-danger" aria-hidden="true">*</span></label>
                 <InputNumber class="form-control" @bind-Value="newRecipe.Servings" />
             </div>
         </div>
 
-        <h3 class="h5">Ingredients</h3>
+        <h3 class="h5">Ingredients <span class="text-danger" aria-hidden="true">*</span></h3>
+        <p class="form-text">Add at least one ingredient. Ingredient names are required; quantities default to 1.</p>
         <div class="card card-body mb-3">
             <label for="product-search" class="form-label">Add an existing product</label>
             <InputText id="product-search" class="form-control mb-2" @bind-Value="productSearch"
@@ -114,7 +113,7 @@
             <div class="row g-2">
                 <div class="col-md-3">
                     <input class="form-control" type="text" inputmode="decimal"
-                           @bind="selectedProductQuantityInput" @bind:event="oninput" placeholder="Qty" />
+                           @bind="selectedProductQuantityInput" @bind:event="oninput" placeholder="Qty (default 1)" />
                 </div>
                 <div class="col-md-3">
                     <InputText class="form-control" @bind-Value="selectedProductUnit" placeholder="Unit (optional)" />
@@ -143,13 +142,13 @@
             <div class="row g-2 mb-2" @key="ingredient">
                 <div class="col-3 col-md-2">
                     <input class="form-control" type="text" inputmode="decimal"
-                           @bind="ingredientQuantityInputs[ingredient]" @bind:event="oninput" placeholder="Qty" />
+                           @bind="ingredientQuantityInputs[ingredient]" @bind:event="oninput" placeholder="Qty (default 1)" />
                 </div>
                 <div class="col-3 col-md-2">
                     <InputText class="form-control" placeholder="Unit" @bind-Value="ingredient.Unit" />
                 </div>
                 <div class="col-4 col-md-6">
-                    <InputText class="form-control" placeholder="Name" @bind-Value="ingredient.Name"
+                    <InputText class="form-control" placeholder="Name *" @bind-Value="ingredient.Name"
                                disabled="@(ingredient.ProductId is not null)" />
                 </div>
                 <div class="col-2">
@@ -162,13 +161,20 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Cooking instructions (one step per line)</label>
+            <label class="form-label">Cooking instructions (one step per line) <span class="text-danger" aria-hidden="true">*</span></label>
             <InputTextArea class="form-control" rows="6" @bind-Value="newRecipe.Instructions" />
         </div>
 
-        @if (formError is not null)
+        @if (GetOrderedFormErrors().Count > 0)
         {
-            <div class="alert alert-danger">@formError</div>
+            <div class="alert alert-danger" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in GetOrderedFormErrors())
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
         }
 
         <div>
@@ -279,6 +285,7 @@
     private string selectedProductUnit = string.Empty;
     private string selectedProductQuantityInput = "1";
     private int? selectedProductId;
+    private List<string> validationErrors = [];
     private string? formError;
     private bool showForm;
     private bool isEditing;
@@ -304,6 +311,114 @@
         await LoadAvailableTagsAsync();
     }
 
+    private void HandleInvalidSubmit(EditContext editContext)
+    {
+        var errors = editContext.GetValidationMessages()
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        formError = null;
+
+        if (newRecipe.Servings is < 1 or > 100)
+        {
+            errors.RemoveAll(error => error.Contains("servings", StringComparison.OrdinalIgnoreCase));
+        }
+
+        errors.AddRange(GetRecipeValidationErrors());
+        validationErrors = errors.Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    private void SetFormError(string message) => formError = message;
+
+    private List<string> GetOrderedFormErrors()
+    {
+        var errors = validationErrors.ToList();
+        if (formError is not null)
+        {
+            errors.Add(formError);
+        }
+        if (tagError is not null)
+        {
+            errors.Add(tagError);
+        }
+
+        return errors
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(GetFormErrorOrder)
+            .ToList();
+    }
+
+    private static int GetFormErrorOrder(string error)
+    {
+        if (error.Contains("title", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+        if (error.Contains("description", StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+        if (error.Contains("tag", StringComparison.OrdinalIgnoreCase))
+        {
+            return 2;
+        }
+        if (error.Contains("prep", StringComparison.OrdinalIgnoreCase))
+        {
+            return 3;
+        }
+        if (error.Contains("cook", StringComparison.OrdinalIgnoreCase))
+        {
+            return 4;
+        }
+        if (error.Contains("servings", StringComparison.OrdinalIgnoreCase))
+        {
+            return 5;
+        }
+        if (error.Contains("ingredient", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("quantity", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("product", StringComparison.OrdinalIgnoreCase))
+        {
+            return 6;
+        }
+        if (error.Contains("instruction", StringComparison.OrdinalIgnoreCase))
+        {
+            return 7;
+        }
+
+        return 8;
+    }
+
+    private void ClearFormErrors()
+    {
+        validationErrors.Clear();
+        formError = null;
+        tagError = null;
+    }
+
+    private List<string> GetRecipeValidationErrors()
+    {
+        var errors = new List<string>();
+        if (newRecipe.Servings is < 1 or > 100)
+        {
+            errors.Add("Servings must be between 1 and 100.");
+        }
+
+        var namedIngredients = newRecipe.Ingredients
+            .Where(ingredient => !string.IsNullOrWhiteSpace(ingredient.Name))
+            .ToList();
+        if (namedIngredients.Count == 0)
+        {
+            errors.Add("Add at least one ingredient.");
+        }
+        else if (namedIngredients.Any(ingredient =>
+                     !ingredientQuantityInputs.TryGetValue(ingredient, out var quantityInput)
+                     || !TryParseQuantity(quantityInput, out _)))
+        {
+            errors.Add("Enter a valid quantity greater than zero for each ingredient.");
+        }
+
+        return errors;
+    }
+
     private void OpenForm()
     {
         newRecipe = new Recipe();
@@ -316,12 +431,11 @@
         selectedTagNames = [];
         selectedAvailableTag = string.Empty;
         newTagInput = string.Empty;
-        tagError = null;
+        ClearFormErrors();
         productSearch = string.Empty;
         selectedProductUnit = string.Empty;
         selectedProductQuantityInput = "1";
         selectedProductId = null;
-        formError = null;
         showForm = true;
     }
 
@@ -362,12 +476,11 @@
             .ToArray();
         selectedAvailableTag = string.Empty;
         newTagInput = string.Empty;
-        tagError = null;
+        ClearFormErrors();
         productSearch = string.Empty;
         selectedProductUnit = string.Empty;
         selectedProductQuantityInput = "1";
         selectedProductId = null;
-        formError = null;
         isEditing = true;
         showForm = true;
         CancelDelete();
@@ -472,13 +585,13 @@
         var product = products.FirstOrDefault(candidate => candidate.Id == selectedProductId);
         if (product is null)
         {
-            formError = "Select a product from the list before adding it.";
+            SetFormError("Select a product from the list before adding it.");
             return;
         }
 
         if (!TryParseQuantity(selectedProductQuantityInput, out var quantity))
         {
-            formError = "Enter a valid quantity greater than zero.";
+            SetFormError("Enter a valid quantity greater than zero.");
             return;
         }
 
@@ -502,6 +615,8 @@
 
     private async Task SaveRecipeAsync()
     {
+        ClearFormErrors();
+
         // Drop blank ingredient rows before validating.
         foreach (var ingredient in newRecipe.Ingredients
                      .Where(i => string.IsNullOrWhiteSpace(i.Name))
@@ -510,9 +625,9 @@
             RemoveIngredient(ingredient);
         }
 
-        if (newRecipe.Ingredients.Count == 0)
+        validationErrors = GetRecipeValidationErrors();
+        if (validationErrors.Count > 0)
         {
-            formError = "Add at least one ingredient.";
             return;
         }
 
@@ -521,7 +636,7 @@
             if (!ingredientQuantityInputs.TryGetValue(ingredient, out var quantityInput)
                 || !TryParseQuantity(quantityInput, out var quantity))
             {
-                formError = "Enter a valid quantity greater than zero for each ingredient.";
+                SetFormError("Enter a valid quantity greater than zero for each ingredient.");
                 return;
             }
 
@@ -536,7 +651,7 @@
 
         if (!isEditing && userId is null)
         {
-            formError = "The demo user account was not found. The recipe could not be saved.";
+            SetFormError("The demo user account was not found. The recipe could not be saved.");
             return;
         }
 
@@ -634,7 +749,7 @@
         }
         catch (DbUpdateException)
         {
-            formError = "The recipe could not be saved because of a database error. Please review the recipe and try again.";
+            SetFormError("The recipe could not be saved because of a database error. Please review the recipe and try again.");
         }
     }
 
