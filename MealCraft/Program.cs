@@ -2,14 +2,27 @@ using MealCraft.Components;
 using MealCraft.Data;
 using MealCraft.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Antiforgery;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Factory (also registers a scoped context) so Blazor Server components get short-lived contexts.
-// Configure SQLite database.
+// Configure SQLite database. In Azure, set the "Default" connection string to a path under
+// /home (e.g. "Data Source=/home/data/mealcraft.db") so the database survives deployments.
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? "Data Source=mealcraft.db";
+
+var databaseFile = new SqliteConnectionStringBuilder(connectionString).DataSource;
+var databaseDirectory = string.IsNullOrEmpty(databaseFile) ? null : Path.GetDirectoryName(Path.GetFullPath(databaseFile));
+if (!string.IsNullOrEmpty(databaseDirectory))
+{
+    Directory.CreateDirectory(databaseDirectory);
+}
+
 builder.Services.AddDbContextFactory<MealCraftDbContext>(options =>
-    options.UseSqlite("Data Source=mealcraft.db"));
+    options.UseSqlite(connectionString));
 
 // Configure ASP.NET Core Identity.
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -24,6 +37,15 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/login";
+    options.LogoutPath = "/logout";
+    options.AccessDeniedPath = "/login";
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+});
+
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 
@@ -36,7 +58,8 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MealCraftDbContext>();
-    await DbSeeder.SeedAsync(dbContext);
+    // Migrations always run; demo data is only seeded in Development.
+    await DbSeeder.SeedAsync(dbContext, seedDemoData: app.Environment.IsDevelopment());
 }
 
 // Configure the HTTP request pipeline.
@@ -57,5 +80,16 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapPost("/logout", async (
+    HttpContext context,
+    IAntiforgery antiforgery,
+    SignInManager<ApplicationUser> signInManager) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await signInManager.SignOutAsync();
+
+    return Results.LocalRedirect("/?logoutSuccess=true");
+});
 
 app.Run();

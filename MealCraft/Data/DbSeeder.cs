@@ -11,11 +11,17 @@ public static class DbSeeder
 
     public static async Task SeedAsync(
         MealCraftDbContext context,
+        bool seedDemoData,
         CancellationToken cancellationToken = default)
     {
         if (context.Database.IsRelational())
         {
             await context.Database.MigrateAsync(cancellationToken);
+        }
+
+        if (!seedDemoData)
+        {
+            return;
         }
 
         var user = await context.Users

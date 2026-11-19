@@ -1,10 +1,15 @@
 @page "/recipes"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @using MealCraft.Data
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IDbContextFactory<MealCraftDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 <PageTitle>Recipes - MealCraft</PageTitle>
 
 <h1>Recipe Management</h1>
@@ -17,7 +22,7 @@
 @if (userId is null)
 {
     <div class="alert alert-danger" role="alert">
-        The demo user account was not found. Recipes cannot be added.
+        Your user account could not be determined. Recipes cannot be added.
     </div>
 }
 
@@ -91,6 +96,8 @@
             </div>
         </div>
 
+        @if (!isEditing)
+        {
         <h3 class="h5">Ingredients <span class="text-danger" aria-hidden="true">*</span></h3>
         <p class="form-text">Add at least one ingredient. Ingredient names are required; quantities default to 1.</p>
         <div class="card card-body mb-3">
@@ -159,6 +166,11 @@
         <div class="mb-3">
             <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddIngredient">Add ingredient</button>
         </div>
+        }
+        else
+        {
+            <p class="form-text">Ingredients are edited in the Ingredients panel next to the recipe.</p>
+        }
 
         <div class="mb-3">
             <label class="form-label">Cooking instructions (one step per line) <span class="text-danger" aria-hidden="true">*</span></label>
@@ -250,13 +262,7 @@
                 Serves: @selectedRecipe.Servings
             </p>
 
-            <h3 class="h5">Ingredients</h3>
-            <ul>
-                @foreach (var ingredient in selectedRecipe.Ingredients)
-                {
-                    <li>@ingredient.Quantity @ingredient.Unit @ingredient.Name</li>
-                }
-            </ul>
+            <RecipeIngredientManager RecipeId="selectedRecipe.Id" OnChanged="OnIngredientsChangedAsync" />
 
             <h3 class="h5">Instructions</h3>
             <ol>
@@ -270,7 +276,6 @@
 </div>
 
 @code {
-    private const string DemoUserEmail = "demo@mealcraft.local";
     private List<Recipe> recipes = [];
     private List<Product> products = [];
     private Recipe? selectedRecipe;
@@ -300,11 +305,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = DbFactory.CreateDbContext();
-        userId = await db.Users
-            .Where(user => user.Email == DemoUserEmail)
-            .Select(user => user.Id)
-            .SingleOrDefaultAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         await LoadRecipesAsync();
         await LoadProductsAsync();
@@ -402,18 +404,21 @@
             errors.Add("Servings must be between 1 and 100.");
         }
 
-        var namedIngredients = newRecipe.Ingredients
-            .Where(ingredient => !string.IsNullOrWhiteSpace(ingredient.Name))
-            .ToList();
-        if (namedIngredients.Count == 0)
+        if (!isEditing)
         {
-            errors.Add("Add at least one ingredient.");
-        }
-        else if (namedIngredients.Any(ingredient =>
-                     !ingredientQuantityInputs.TryGetValue(ingredient, out var quantityInput)
-                     || !TryParseQuantity(quantityInput, out _)))
-        {
-            errors.Add("Enter a valid quantity greater than zero for each ingredient.");
+            var namedIngredients = newRecipe.Ingredients
+                .Where(ingredient => !string.IsNullOrWhiteSpace(ingredient.Name))
+                .ToList();
+            if (namedIngredients.Count == 0)
+            {
+                errors.Add("Add at least one ingredient.");
+            }
+            else if (namedIngredients.Any(ingredient =>
+                         !ingredientQuantityInputs.TryGetValue(ingredient, out var quantityInput)
+                         || !TryParseQuantity(quantityInput, out _)))
+            {
+                errors.Add("Enter a valid quantity greater than zero for each ingredient.");
+            }
         }
 
         return errors;
@@ -454,15 +459,7 @@
             PrepTimeMinutes = selectedRecipe.PrepTimeMinutes,
             CookTimeMinutes = selectedRecipe.CookTimeMinutes,
             Servings = selectedRecipe.Servings,
-            Instructions = selectedRecipe.Instructions,
-            Ingredients = selectedRecipe.Ingredients.Select(ingredient => new Ingredient
-            {
-                Name = ingredient.Name,
-                ProductId = ingredient.ProductId,
-                Quantity = ingredient.Quantity,
-                Unit = ingredient.Unit,
-                DisplayOrder = ingredient.DisplayOrder
-            }).ToList()
+            Instructions = selectedRecipe.Instructions
         };
         ingredientQuantityInputs.Clear();
         foreach (var ingredient in newRecipe.Ingredients)
@@ -617,18 +614,21 @@
     {
         ClearFormErrors();
 
-        // Drop blank ingredient rows before validating.
-        foreach (var ingredient in newRecipe.Ingredients
-                     .Where(i => string.IsNullOrWhiteSpace(i.Name))
-                     .ToList())
+        if (!isEditing)
         {
-            RemoveIngredient(ingredient);
-        }
+            // Drop blank ingredient rows before validating.
+            foreach (var ingredient in newRecipe.Ingredients
+                         .Where(i => string.IsNullOrWhiteSpace(i.Name))
+                         .ToList())
+            {
+                RemoveIngredient(ingredient);
+            }
 
-        validationErrors = GetRecipeValidationErrors();
-        if (validationErrors.Count > 0)
-        {
-            return;
+            validationErrors = GetRecipeValidationErrors();
+            if (validationErrors.Count > 0)
+            {
+                return;
+            }
         }
 
         foreach (var ingredient in newRecipe.Ingredients)
@@ -697,7 +697,6 @@
             if (isEditing)
             {
                 recipeToSave = await db.Recipes
-                    .Include(recipe => recipe.Ingredients)
                     .Include(recipe => recipe.RecipeTags)
                     .SingleAsync(recipe => recipe.Id == newRecipe.Id && recipe.UserId == userId);
 
@@ -707,10 +706,6 @@
                 recipeToSave.CookTimeMinutes = newRecipe.CookTimeMinutes;
                 recipeToSave.Servings = newRecipe.Servings;
                 recipeToSave.Instructions = newRecipe.Instructions;
-
-                db.RecipeIngredients.RemoveRange(recipeToSave.Ingredients);
-                recipeToSave.Ingredients.Clear();
-                recipeToSave.Ingredients.AddRange(newRecipe.Ingredients);
 
                 var desiredTags = newRecipe.Tags.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 foreach (var existingTag in recipeToSave.RecipeTags.ToList())
@@ -862,6 +857,14 @@
             .Include(recipe => recipe.RecipeTags)
             .OrderBy(recipe => recipe.Title)
             .ToListAsync();
+    }
+
+    private async Task OnIngredientsChangedAsync()
+    {
+        var selectedId = selectedRecipe?.Id;
+        await LoadRecipesAsync();
+        await LoadProductsAsync();
+        selectedRecipe = recipes.FirstOrDefault(recipe => recipe.Id == selectedId);
     }
 
     private static IEnumerable<string> SplitSteps(string instructions) =>

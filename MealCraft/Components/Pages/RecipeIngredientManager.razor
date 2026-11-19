@@ -1,0 +1,292 @@
+@using System.ComponentModel.DataAnnotations
+@using MealCraft.Data
+@using MealCraft.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<MealCraftDbContext> DbFactory
+
+<section aria-labelledby="ingredient-manager-heading">
+    <h3 id="ingredient-manager-heading" class="h5">Ingredients</h3>
+
+    @if (ingredients is null)
+    {
+        <p role="status">Loading ingredients...</p>
+    }
+    else
+    {
+        @if (ingredients.Count == 0)
+        {
+            <p class="text-muted">This recipe has no ingredients yet.</p>
+        }
+        else
+        {
+            <ul class="list-group mb-3">
+                @foreach (var ingredient in ingredients)
+                {
+                    <li class="list-group-item" @key="ingredient.Id">
+                        @if (editingId == ingredient.Id)
+                        {
+                            <EditForm Model="draft" OnValidSubmit="SaveEditAsync" FormName="@($"editIngredient{ingredient.Id}")">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                @RenderFields(false)
+                                <button type="submit" class="btn btn-success btn-sm me-2">Save</button>
+                                <button type="button" class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>@FormatQuantity(ingredient.Quantity) @ingredient.Unit @ingredient.Name</span>
+                                <span>
+                                    @if (deletingId == ingredient.Id)
+                                    {
+                                        <button type="button" class="btn btn-danger btn-sm me-1" @onclick="DeleteAsync">Confirm remove</button>
+                                        <button type="button" class="btn btn-secondary btn-sm" @onclick="CancelDelete">Cancel</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-outline-primary btn-sm me-1" @onclick="() => StartEdit(ingredient)">Edit</button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => StartDelete(ingredient)">Remove</button>
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (editingId is null)
+        {
+            <EditForm Model="draft" OnValidSubmit="AddAsync" FormName="addIngredient" class="card card-body">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <h4 class="h6">Add ingredient</h4>
+                @RenderFields(true)
+                <div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Add ingredient</button>
+                </div>
+            </EditForm>
+        }
+
+        @if (errorMessage is not null)
+        {
+            <div class="alert alert-danger mt-3" role="alert">@errorMessage</div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public int RecipeId { get; set; }
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private List<Ingredient>? ingredients;
+    private List<Product> products = [];
+    private IngredientDraft draft = new();
+    private int loadedRecipeId;
+    private int? editingId;
+    private int? deletingId;
+    private string? errorMessage;
+
+    private RenderFragment RenderFields(bool suggestProducts) => @<div class="row g-2 mb-2">
+        <div class="col-3">
+            <InputNumber class="form-control" placeholder="Qty" aria-label="Quantity" @bind-Value="draft.Quantity" />
+        </div>
+        <div class="col-3">
+            <InputText class="form-control" placeholder="Unit" aria-label="Unit" @bind-Value="draft.Unit" />
+        </div>
+        <div class="col-6">
+            <InputText class="form-control" placeholder="Ingredient name" aria-label="Ingredient name"
+                       list="@(suggestProducts ? "ingredient-name-suggestions" : null)" @bind-Value="draft.Name" />
+            @if (suggestProducts)
+            {
+                <datalist id="ingredient-name-suggestions">
+                    @foreach (var product in products)
+                    {
+                        <option value="@product.Name"></option>
+                    }
+                </datalist>
+            }
+        </div>
+    </div>;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedRecipeId == RecipeId && ingredients is not null)
+        {
+            return;
+        }
+
+        loadedRecipeId = RecipeId;
+        ResetState();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        await using var db = DbFactory.CreateDbContext();
+        ingredients = await db.RecipeIngredients
+            .AsNoTracking()
+            .Where(ingredient => ingredient.RecipeId == RecipeId)
+            .OrderBy(ingredient => ingredient.DisplayOrder)
+            .ThenBy(ingredient => ingredient.Id)
+            .ToListAsync();
+        products = await db.Products
+            .AsNoTracking()
+            .OrderBy(product => product.Name)
+            .ToListAsync();
+    }
+
+    private void ResetState()
+    {
+        draft = new IngredientDraft();
+        editingId = null;
+        deletingId = null;
+        errorMessage = null;
+    }
+
+    private async Task AddAsync()
+    {
+        await SaveAsync(async db =>
+        {
+            var product = await ResolveProductAsync(db, draft);
+            var nextOrder = await db.RecipeIngredients
+                .Where(ingredient => ingredient.RecipeId == RecipeId)
+                .Select(ingredient => (int?)ingredient.DisplayOrder)
+                .MaxAsync() ?? 0;
+
+            db.RecipeIngredients.Add(new Ingredient
+            {
+                RecipeId = RecipeId,
+                Product = product,
+                Name = product.Name,
+                Quantity = draft.Quantity,
+                Unit = draft.Unit?.Trim() ?? string.Empty,
+                DisplayOrder = nextOrder + 1
+            });
+        });
+    }
+
+    private void StartEdit(Ingredient ingredient)
+    {
+        editingId = ingredient.Id;
+        deletingId = null;
+        errorMessage = null;
+        draft = new IngredientDraft
+        {
+            Name = ingredient.Name,
+            Quantity = ingredient.Quantity,
+            Unit = ingredient.Unit
+        };
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        draft = new IngredientDraft();
+        errorMessage = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        var id = editingId;
+        await SaveAsync(async db =>
+        {
+            var ingredient = await db.RecipeIngredients
+                .SingleOrDefaultAsync(candidate => candidate.Id == id && candidate.RecipeId == RecipeId)
+                ?? throw new InvalidOperationException("This ingredient no longer exists. Reload the page and try again.");
+
+            var product = await ResolveProductAsync(db, draft);
+            ingredient.Product = product;
+            ingredient.Name = product.Name;
+            ingredient.Quantity = draft.Quantity;
+            ingredient.Unit = draft.Unit?.Trim() ?? string.Empty;
+        });
+    }
+
+    private void StartDelete(Ingredient ingredient)
+    {
+        deletingId = ingredient.Id;
+        errorMessage = null;
+    }
+
+    private void CancelDelete() => deletingId = null;
+
+    private async Task DeleteAsync()
+    {
+        var id = deletingId;
+        await SaveAsync(async db =>
+        {
+            var ingredient = await db.RecipeIngredients
+                .SingleOrDefaultAsync(candidate => candidate.Id == id && candidate.RecipeId == RecipeId);
+            if (ingredient is not null)
+            {
+                db.RecipeIngredients.Remove(ingredient);
+            }
+        });
+    }
+
+    // Runs one database change, then reloads from SQLite so the list always reflects what was persisted.
+    private async Task SaveAsync(Func<MealCraftDbContext, Task> change)
+    {
+        errorMessage = null;
+        try
+        {
+            await using (var db = DbFactory.CreateDbContext())
+            {
+                await change(db);
+                await db.SaveChangesAsync();
+            }
+
+            ResetState();
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (DbUpdateException)
+        {
+            errorMessage = "The change could not be saved. This ingredient may still be used by a grocery list.";
+        }
+    }
+
+    // Ingredients point at a shared catalog Product; reuse it by name or create it on demand.
+    private static async Task<Product> ResolveProductAsync(MealCraftDbContext db, IngredientDraft input)
+    {
+        var name = input.Name.Trim();
+        var existing = await db.Products
+            .FirstOrDefaultAsync(product => product.Name.ToLower() == name.ToLower());
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var created = new Product
+        {
+            Name = name,
+            DefaultUnit = string.IsNullOrWhiteSpace(input.Unit) ? null : input.Unit.Trim()
+        };
+        db.Products.Add(created);
+        return created;
+    }
+
+    private static string FormatQuantity(decimal quantity) => quantity.ToString("0.##");
+
+    public class IngredientDraft
+    {
+        [Required(ErrorMessage = "Enter an ingredient name.")]
+        [StringLength(120)]
+        public string Name { get; set; } = string.Empty;
+
+        [Range(typeof(decimal), "0.01", "100000", ErrorMessage = "Quantity must be greater than 0.")]
+        public decimal Quantity { get; set; }
+
+        [StringLength(50)]
+        public string? Unit { get; set; }
+    }
+}
