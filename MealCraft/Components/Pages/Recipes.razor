@@ -4,7 +4,10 @@
 @using MealCraft.Data
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IDbContextFactory<MealCraftDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 <PageTitle>Recipes - MealCraft</PageTitle>
 
 <h1>Recipe Management</h1>
@@ -17,7 +20,7 @@
 @if (userId is null)
 {
     <div class="alert alert-danger" role="alert">
-        The demo user account was not found. Recipes cannot be added.
+        Your user account could not be determined. Recipes cannot be added.
     </div>
 }
 
@@ -224,7 +227,6 @@
 </div>
 
 @code {
-    private const string DemoUserEmail = "demo@mealcraft.local";
     private List<Recipe> recipes = [];
     private List<Product> products = [];
     private Recipe? selectedRecipe;
@@ -248,11 +250,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = DbFactory.CreateDbContext();
-        userId = await db.Users
-            .Where(user => user.Email == DemoUserEmail)
-            .Select(user => user.Id)
-            .SingleOrDefaultAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         await LoadRecipesAsync();
         await LoadProductsAsync();
@@ -381,7 +380,7 @@
 
         if (!isEditing && userId is null)
         {
-            formError = "The demo user account was not found. The recipe could not be saved.";
+            formError = "Your user account could not be determined. The recipe could not be saved.";
             return;
         }
 
