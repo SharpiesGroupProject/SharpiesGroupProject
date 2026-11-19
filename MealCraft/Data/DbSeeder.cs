@@ -1,4 +1,5 @@
 using MealCraft.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace MealCraft.Data;
@@ -11,6 +12,8 @@ public static class DbSeeder
 
     public static async Task SeedAsync(
         MealCraftDbContext context,
+        UserManager<ApplicationUser> userManager,
+        string? demoPassword,
         bool seedDemoData,
         CancellationToken cancellationToken = default)
     {
@@ -22,6 +25,12 @@ public static class DbSeeder
         if (!seedDemoData)
         {
             return;
+        }
+
+        if (string.IsNullOrWhiteSpace(demoPassword))
+        {
+            throw new InvalidOperationException(
+                "DemoUser password is not configured. Set DemoUser:Password using .NET User Secrets.");
         }
 
         var user = await context.Users
@@ -48,6 +57,22 @@ public static class DbSeeder
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Assign a password only if DemoUser does not already have one.
+        if (!await userManager.HasPasswordAsync(user))
+        {
+            var result = await userManager.AddPasswordAsync(user, demoPassword);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(
+                    "; ",
+                    result.Errors.Select(error => error.Description));
+
+                throw new InvalidOperationException(
+                    $"Failed to configure DemoUser password: {errors}");
+            }
+        }
 
         var products = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
         var productDetails = new[]
@@ -95,7 +120,7 @@ public static class DbSeeder
                 PrepMinutes = 10,
                 CookMinutes = 20,
                 Servings = 4,
-                RecipeInstructions = "Cook the pasta. Saute the tomatoes in olive oil until softened. Toss with the pasta and finish with fresh basil.",
+                RecipeInstructions = "Cook the pasta.\n Saute the tomatoes in olive oil until softened.\n Toss with the pasta.\n Finish with fresh basil.",
                 UserId = user.Id,
                 RecipeTags =
                 [

@@ -58,8 +58,11 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MealCraftDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    // Read the DemoUser password from configuration (User Secrets in Development).
+    var demoPassword = app.Configuration["DemoUser:Password"];
     // Migrations always run; demo data is only seeded in Development.
-    await DbSeeder.SeedAsync(dbContext, seedDemoData: app.Environment.IsDevelopment());
+    await DbSeeder.SeedAsync(dbContext, userManager, demoPassword, seedDemoData: app.Environment.IsDevelopment());
 }
 
 // Configure the HTTP request pipeline.
