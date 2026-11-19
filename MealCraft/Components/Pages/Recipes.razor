@@ -2,6 +2,7 @@
 @using MealCraft.Data
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
+@using System.Globalization
 @inject IDbContextFactory<MealCraftDbContext> DbFactory
 <PageTitle>Recipes - MealCraft</PageTitle>
 
@@ -36,8 +37,45 @@
             <InputTextArea class="form-control" rows="2" @bind-Value="newRecipe.Description" />
         </div>
         <div class="mb-3">
-            <label class="form-label">Category / tags (comma separated)</label>
-            <InputText class="form-control" @bind-Value="tagInput" placeholder="e.g. Dinner, Vegetarian" />
+            <label class="form-label">Tags used by your recipes</label>
+            <div class="input-group">
+                <InputSelect class="form-select" @bind-Value="selectedAvailableTag">
+                    <option value="">Select an existing tag</option>
+                    @foreach (var tag in availableTags)
+                    {
+                        <option value="@tag">@tag</option>
+                    }
+                </InputSelect>
+                <button type="button" class="btn btn-outline-primary" @onclick="AddSelectedTag"
+                        disabled="@string.IsNullOrEmpty(selectedAvailableTag)">
+                    Add tag
+                </button>
+            </div>
+            @if (availableTags.Count == 0)
+            {
+                <div class="form-text">No tags have been used in your recipes yet.</div>
+            }
+            @if (selectedTagNames.Length > 0)
+            {
+                <div class="mt-2">
+                    @foreach (var tag in selectedTagNames)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1 mb-1"
+                                @onclick="() => RemoveTag(tag)">
+                            @tag <span aria-hidden="true">&times;</span>
+                        </button>
+                    }
+                </div>
+            }
+            <div class="input-group mt-2">
+                <InputText class="form-control" @bind-Value="newTagInput" placeholder="New tag name" />
+                <button type="button" class="btn btn-outline-secondary" @onclick="AddNewTag">Add new tag</button>
+            </div>
+            <div class="form-text">New tags are saved with this recipe and then available for your other recipes.</div>
+            @if (tagError is not null)
+            {
+                <div class="text-danger mt-1" role="alert">@tagError</div>
+            }
         </div>
 
         <div class="row mb-3">
@@ -75,7 +113,8 @@
             </InputSelect>
             <div class="row g-2">
                 <div class="col-md-3">
-                    <InputNumber class="form-control" @bind-Value="selectedProductQuantity" placeholder="Qty" />
+                    <input class="form-control" type="text" inputmode="decimal"
+                           @bind="selectedProductQuantityInput" @bind:event="oninput" placeholder="Qty" />
                 </div>
                 <div class="col-md-3">
                     <InputText class="form-control" @bind-Value="selectedProductUnit" placeholder="Unit (optional)" />
@@ -103,7 +142,8 @@
         {
             <div class="row g-2 mb-2" @key="ingredient">
                 <div class="col-3 col-md-2">
-                    <InputNumber class="form-control" placeholder="Qty" @bind-Value="ingredient.Quantity" />
+                    <input class="form-control" type="text" inputmode="decimal"
+                           @bind="ingredientQuantityInputs[ingredient]" @bind:event="oninput" placeholder="Qty" />
                 </div>
                 <div class="col-3 col-md-2">
                     <InputText class="form-control" placeholder="Unit" @bind-Value="ingredient.Unit" />
@@ -170,7 +210,10 @@
         {
             <h2>@selectedRecipe.Title</h2>
             <button type="button" class="btn btn-outline-primary btn-sm me-2 mb-3" @onclick="StartEditing">Edit recipe</button>
-            <button type="button" class="btn btn-outline-danger btn-sm mb-3" @onclick="ShowDeleteOptions">Delete recipe</button>
+            @if (!showForm)
+            {
+                <button type="button" class="btn btn-outline-danger btn-sm mb-3" @onclick="ShowDeleteOptions">Delete recipe</button>
+            }
 
             @if (showDeleteOptions)
             {
@@ -226,10 +269,15 @@
     private List<Product> products = [];
     private Recipe? selectedRecipe;
     private Recipe newRecipe = new();
-    private string tagInput = string.Empty;
+    private readonly Dictionary<Ingredient, string> ingredientQuantityInputs = [];
+    private List<string> availableTags = [];
+    private string[] selectedTagNames = [];
+    private string selectedAvailableTag = string.Empty;
+    private string newTagInput = string.Empty;
+    private string? tagError;
     private string productSearch = string.Empty;
     private string selectedProductUnit = string.Empty;
-    private decimal selectedProductQuantity;
+    private string selectedProductQuantityInput = "1";
     private int? selectedProductId;
     private string? formError;
     private bool showForm;
@@ -253,18 +301,25 @@
 
         await LoadRecipesAsync();
         await LoadProductsAsync();
+        await LoadAvailableTagsAsync();
     }
 
     private void OpenForm()
     {
         newRecipe = new Recipe();
-        newRecipe.Ingredients.Add(new Ingredient());
+        var ingredient = new Ingredient { Quantity = 1 };
+        newRecipe.Ingredients.Add(ingredient);
+        ingredientQuantityInputs.Clear();
+        ingredientQuantityInputs[ingredient] = FormatQuantity(ingredient.Quantity);
         CancelDelete();
         isEditing = false;
-        tagInput = string.Empty;
+        selectedTagNames = [];
+        selectedAvailableTag = string.Empty;
+        newTagInput = string.Empty;
+        tagError = null;
         productSearch = string.Empty;
         selectedProductUnit = string.Empty;
-        selectedProductQuantity = 0;
+        selectedProductQuantityInput = "1";
         selectedProductId = null;
         formError = null;
         showForm = true;
@@ -295,10 +350,22 @@
                 DisplayOrder = ingredient.DisplayOrder
             }).ToList()
         };
-        tagInput = string.Join(", ", selectedRecipe.Tags);
+        ingredientQuantityInputs.Clear();
+        foreach (var ingredient in newRecipe.Ingredients)
+        {
+            ingredientQuantityInputs[ingredient] = FormatQuantity(ingredient.Quantity);
+        }
+        selectedTagNames = selectedRecipe.Tags
+            .Select(tag => tag.Trim())
+            .Where(tag => tag.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        selectedAvailableTag = string.Empty;
+        newTagInput = string.Empty;
+        tagError = null;
         productSearch = string.Empty;
         selectedProductUnit = string.Empty;
-        selectedProductQuantity = 0;
+        selectedProductQuantityInput = "1";
         selectedProductId = null;
         formError = null;
         isEditing = true;
@@ -332,9 +399,73 @@
         deleteError = null;
     }
 
-    private void AddIngredient() => newRecipe.Ingredients.Add(new Ingredient());
+    private void AddIngredient()
+    {
+        var ingredient = new Ingredient { Quantity = 1 };
+        newRecipe.Ingredients.Add(ingredient);
+        ingredientQuantityInputs[ingredient] = FormatQuantity(ingredient.Quantity);
+    }
 
-    private void RemoveIngredient(Ingredient ingredient) => newRecipe.Ingredients.Remove(ingredient);
+    private void RemoveIngredient(Ingredient ingredient)
+    {
+        newRecipe.Ingredients.Remove(ingredient);
+        ingredientQuantityInputs.Remove(ingredient);
+    }
+
+    private void AddSelectedTag()
+    {
+        var tag = availableTags.FirstOrDefault(candidate =>
+            string.Equals(candidate, selectedAvailableTag, StringComparison.OrdinalIgnoreCase));
+        if (tag is null)
+        {
+            tagError = "Select a tag from your recipes before adding it.";
+            return;
+        }
+
+        selectedTagNames = selectedTagNames
+            .Append(tag)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        selectedAvailableTag = string.Empty;
+        tagError = null;
+    }
+
+    private void AddNewTag()
+    {
+        var tag = newTagInput.Trim();
+        if (tag.Length == 0)
+        {
+            tagError = "Enter a tag name.";
+            return;
+        }
+
+        if (tag.Length > 50)
+        {
+            tagError = "Tag names must be 50 characters or fewer.";
+            return;
+        }
+
+        var existingTag = availableTags.FirstOrDefault(candidate =>
+            string.Equals(candidate, tag, StringComparison.OrdinalIgnoreCase));
+        var canonicalTag = existingTag
+            ?? selectedTagNames.FirstOrDefault(candidate =>
+                string.Equals(candidate, tag, StringComparison.OrdinalIgnoreCase))
+            ?? tag;
+
+        selectedTagNames = selectedTagNames
+            .Append(canonicalTag)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        newTagInput = string.Empty;
+        tagError = null;
+    }
+
+    private void RemoveTag(string tag)
+    {
+        selectedTagNames = selectedTagNames
+            .Where(candidate => !string.Equals(candidate, tag, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
 
     private void AddSelectedProduct()
     {
@@ -345,18 +476,26 @@
             return;
         }
 
-        newRecipe.Ingredients.Add(new Ingredient
+        if (!TryParseQuantity(selectedProductQuantityInput, out var quantity))
+        {
+            formError = "Enter a valid quantity greater than zero.";
+            return;
+        }
+
+        var ingredient = new Ingredient
         {
             Name = product.Name,
             ProductId = product.Id,
-            Quantity = selectedProductQuantity,
+            Quantity = quantity,
             Unit = string.IsNullOrWhiteSpace(selectedProductUnit)
                 ? product.DefaultUnit ?? string.Empty
                 : selectedProductUnit
-        });
+        };
+        newRecipe.Ingredients.Add(ingredient);
+        ingredientQuantityInputs[ingredient] = FormatQuantity(quantity);
 
         selectedProductId = null;
-        selectedProductQuantity = 0;
+        selectedProductQuantityInput = "1";
         selectedProductUnit = string.Empty;
         formError = null;
     }
@@ -364,15 +503,35 @@
     private async Task SaveRecipeAsync()
     {
         // Drop blank ingredient rows before validating.
-        newRecipe.Ingredients.RemoveAll(i => string.IsNullOrWhiteSpace(i.Name));
+        foreach (var ingredient in newRecipe.Ingredients
+                     .Where(i => string.IsNullOrWhiteSpace(i.Name))
+                     .ToList())
+        {
+            RemoveIngredient(ingredient);
+        }
+
         if (newRecipe.Ingredients.Count == 0)
         {
             formError = "Add at least one ingredient.";
             return;
         }
 
-        newRecipe.Tags = tagInput
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        foreach (var ingredient in newRecipe.Ingredients)
+        {
+            if (!ingredientQuantityInputs.TryGetValue(ingredient, out var quantityInput)
+                || !TryParseQuantity(quantityInput, out var quantity))
+            {
+                formError = "Enter a valid quantity greater than zero for each ingredient.";
+                return;
+            }
+
+            ingredient.Quantity = quantity;
+        }
+
+        newRecipe.Tags = selectedTagNames
+            .Select(tag => tag.Trim())
+            .Where(tag => tag.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (!isEditing && userId is null)
@@ -425,7 +584,7 @@
                 recipeToSave = await db.Recipes
                     .Include(recipe => recipe.Ingredients)
                     .Include(recipe => recipe.RecipeTags)
-                    .SingleAsync(recipe => recipe.Id == newRecipe.Id);
+                    .SingleAsync(recipe => recipe.Id == newRecipe.Id && recipe.UserId == userId);
 
                 recipeToSave.Title = newRecipe.Title;
                 recipeToSave.Description = newRecipe.Description;
@@ -469,6 +628,7 @@
             var savedRecipeId = recipeToSave.Id;
             await LoadRecipesAsync();
             await LoadProductsAsync();
+            await LoadAvailableTagsAsync();
             selectedRecipe = recipes.Single(recipe => recipe.Id == savedRecipeId);
             CloseForm();
         }
@@ -480,7 +640,7 @@
 
     private async Task DeleteSelectedRecipeAsync()
     {
-        if (selectedRecipe is null)
+        if (selectedRecipe is null || showForm)
         {
             return;
         }
@@ -496,7 +656,7 @@
         var recipe = await db.Recipes
             .Include(candidate => candidate.Ingredients)
             .Include(candidate => candidate.RecipeTags)
-            .SingleOrDefaultAsync(candidate => candidate.Id == recipeId);
+            .SingleOrDefaultAsync(candidate => candidate.Id == recipeId && candidate.UserId == userId);
         if (recipe is null)
         {
             deleteError = "This recipe could not be found in the database. Reload the page and try again.";
@@ -554,11 +714,35 @@
             .ToListAsync();
     }
 
+    private async Task LoadAvailableTagsAsync()
+    {
+        if (userId is null)
+        {
+            availableTags = [];
+            return;
+        }
+
+        await using var db = DbFactory.CreateDbContext();
+        var tagNames = await db.RecipeTags
+            .AsNoTracking()
+            .Where(recipeTag => recipeTag.Recipe.UserId == userId)
+            .Select(recipeTag => recipeTag.TagName.Trim())
+            .Distinct()
+            .ToListAsync();
+
+        availableTags = tagNames
+            .Where(tag => tag.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private async Task LoadRecipesAsync()
     {
         await using var db = DbFactory.CreateDbContext();
         recipes = await db.Recipes
             .AsNoTracking()
+            .Where(recipe => recipe.UserId == userId)
             .Include(recipe => recipe.Ingredients)
             .Include(recipe => recipe.RecipeTags)
             .OrderBy(recipe => recipe.Title)
@@ -567,4 +751,29 @@
 
     private static IEnumerable<string> SplitSteps(string instructions) =>
         instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static string FormatQuantity(decimal quantity) =>
+        (quantity == 0 ? 1 : quantity).ToString(CultureInfo.CurrentCulture);
+
+    private static bool TryParseQuantity(string quantityInput, out decimal quantity)
+    {
+        if (string.IsNullOrWhiteSpace(quantityInput))
+        {
+            quantity = 1;
+            return true;
+        }
+
+        if (!decimal.TryParse(quantityInput, NumberStyles.Number, CultureInfo.CurrentCulture, out quantity))
+        {
+            return false;
+        }
+
+        if (quantity == 0)
+        {
+            quantity = 1;
+            return true;
+        }
+
+        return quantity > 0;
+    }
 }
