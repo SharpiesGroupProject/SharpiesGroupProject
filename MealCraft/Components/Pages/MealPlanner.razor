@@ -4,8 +4,11 @@
 @using MealCraft.Data
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IDbContextFactory<MealCraftDbContext> DbFactory
 @inject ILogger<MealPlanner> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Meal Planner - MealCraft</PageTitle>
 <h1>Weekly Meal Planner</h1>
@@ -13,7 +16,7 @@
 @if (userId is null)
 {
     <div class="alert alert-danger" role="alert">
-        The demo user account was not found. Meal plans cannot be saved.
+        Your user account could not be determined. Meal plans cannot be saved.
     </div>
 }
 
@@ -86,7 +89,6 @@
 }
 
 @code {
-    private const string DemoUserEmail = "demo@mealcraft.local";
     private static readonly string[] Slots = { "Breakfast", "Lunch", "Dinner" };
 
     private string? userId;
@@ -107,16 +109,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = DbFactory.CreateDbContext();
-        userId = await db.Users
-            .Where(user => user.Email == DemoUserEmail)
-            .Select(user => user.Id)
-            .SingleOrDefaultAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        availableRecipes = await db.Recipes
-            .AsNoTracking()
-            .OrderBy(r => r.Title)
-            .ToListAsync();
+        await using var db = DbFactory.CreateDbContext();
+        if (userId is not null)
+        {
+            availableRecipes = await db.Recipes
+                .AsNoTracking()
+                .Where(recipe => recipe.UserId == userId)
+                .OrderBy(recipe => recipe.Title)
+                .ToListAsync();
+        }
 
         await LoadWeekAsync();
     }

@@ -11,6 +11,7 @@ public class GroceryListItem
     public string Unit { get; set; } = string.Empty;
     public string SourceType { get; set; } = string.Empty;
     public bool IsPurchased { get; set; }
+    public bool IsDismissed { get; set; }
 
     public MealPlan MealPlan { get; set; } = null!;
     public Product? Product { get; set; }

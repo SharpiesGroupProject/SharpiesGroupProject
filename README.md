@@ -10,6 +10,8 @@ If your local database is old or doesn't match the current schema (e.g. "no such
 
 In the `MealCraft` directory, run `dotnet run`.
 
+The grocery list includes combined ingredients from recipes scheduled in the current Meal Planner week. You can continue adding and managing standalone grocery items separately.
+
 ## Project Summary & Design
 
 [Project Proposal Page](docs/project_proposal.md)

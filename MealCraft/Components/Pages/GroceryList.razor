@@ -9,6 +9,9 @@
 @inject ILogger<GroceryList> Logger
 @using System.Globalization
 @using System.Linq
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Grocery List - MealCraft</PageTitle>
 
@@ -120,11 +123,12 @@
             <ul class="grocery-items">
                 @foreach (var item in VisibleItems)
                 {
-                    <li class="grocery-item @(item.IsPurchased ? "is-purchased" : "")" @key="item.Id">
+                    <li class="grocery-item @(item.IsPurchased ? "is-purchased" : "")"
+                        @key="@($"{(item.IsRecipeGenerated ? "recipe" : "manual")}-{item.Id}")">
                         <label class="purchase-toggle">
                             <input type="checkbox" checked="@item.IsPurchased"
                                    aria-label="Mark @item.Name @(item.IsPurchased ? "as not purchased" : "as purchased")"
-                                   @onchange="args => TogglePurchased(item.Id, args.Value is bool isPurchased && isPurchased)" />
+                                   @onchange="args => TogglePurchased(item, args.Value is bool isPurchased && isPurchased)" />
                             <span class="custom-checkbox" aria-hidden="true"></span>
                         </label>
                         <div class="item-copy">
@@ -138,14 +142,25 @@
                             </div>
                         </div>
                         <div class="item-actions">
-                            <button type="button" class="icon-button" aria-label="Edit @item.Name"
-                                    title="Edit item" @onclick="@(() => BeginEdit(item))">
-                                Edit
-                            </button>
-                            <button type="button" class="icon-button delete-button" aria-label="Delete @item.Name"
-                                    title="Delete item" @onclick="@(() => DeleteItem(item.Id))">
-                                Delete
-                            </button>
+                            @if (item.IsRecipeGenerated)
+                            {
+                                <button type="button" class="icon-button delete-button"
+                                        aria-label="Remove @item.Name from this week's grocery list"
+                                        title="Remove from this week's list" @onclick="@(() => DismissRecipeItem(item.Id))">
+                                    Remove
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="icon-button" aria-label="Edit @item.Name"
+                                        title="Edit item" @onclick="@(() => BeginEdit(item))">
+                                    Edit
+                                </button>
+                                <button type="button" class="icon-button delete-button" aria-label="Delete @item.Name"
+                                        title="Delete item" @onclick="@(() => DeleteItem(item.Id))">
+                                    Delete
+                                </button>
+                            }
                         </div>
                     </li>
                 }
@@ -205,8 +220,9 @@
 
 @code {
     private static readonly string[] Categories = ["Produce", "Dairy", "Bakery", "Pantry", "Meat & seafood", "Household", "Other"];
+    private const string RecipeItemSourceType = "MealPlan";
 
-    private List<StandaloneGroceryItem> items = [];
+    private List<GroceryListEntry> items = [];
 
     private string itemName = "";
     private string itemQuantity = "";
@@ -215,11 +231,13 @@
     private string feedbackMessage = "";
     private bool isValidationError;
     private int? editingItemId;
+    private int? currentMealPlanId;
+    private string? userId;
 
     private int RemainingCount => items.Count(item => !item.IsPurchased);
     private int PurchasedCount => items.Count(item => item.IsPurchased);
 
-    private IEnumerable<StandaloneGroceryItem> VisibleItems => items
+    private IEnumerable<GroceryListEntry> VisibleItems => items
         .Where(item => selectedFilter switch
         {
             "to-buy" => !item.IsPurchased,
@@ -231,26 +249,192 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        await SyncRecipeItemsAsync();
         await LoadItemsAsync();
     }
+
+    private static DateOnly CurrentWeekStart
+    {
+        get
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            return today.AddDays(-(int)today.DayOfWeek);
+        }
+    }
+
+    private async Task<bool> SyncRecipeItemsAsync()
+    {
+        currentMealPlanId = null;
+        if (userId is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var weekStart = CurrentWeekStart;
+            var rangeStart = weekStart.ToDateTime(TimeOnly.MinValue);
+            var rangeEnd = weekStart.AddDays(7).ToDateTime(TimeOnly.MinValue);
+            var mealPlanWeekStart = weekStart.AddDays(1).ToDateTime(TimeOnly.MinValue);
+
+            var mealPlan = await dbContext.MealPlans
+                .FirstOrDefaultAsync(plan => plan.UserId == userId && plan.WeekStartDate == mealPlanWeekStart);
+            var plannedMeals = await dbContext.PlannedMeals
+                .Where(meal => meal.MealPlan.UserId == userId
+                    && meal.MealDate >= rangeStart && meal.MealDate < rangeEnd)
+                .Include(meal => meal.Recipe)
+                    .ThenInclude(recipe => recipe.Ingredients)
+                        .ThenInclude(ingredient => ingredient.Product)
+                .ToListAsync();
+
+            if (mealPlan is null && plannedMeals.Count == 0)
+            {
+                return true;
+            }
+
+            if (mealPlan is null)
+            {
+                mealPlan = new MealPlan
+                {
+                    UserId = userId,
+                    WeekStartDate = mealPlanWeekStart,
+                    IsActive = true
+                };
+                dbContext.MealPlans.Add(mealPlan);
+                await dbContext.SaveChangesAsync();
+            }
+
+            currentMealPlanId = mealPlan.Id;
+            var existingItems = await dbContext.GroceryListItems
+                .Include(item => item.Sources)
+                .Where(item => item.MealPlanId == mealPlan.Id && item.SourceType == RecipeItemSourceType)
+                .ToListAsync();
+            var previousState = existingItems
+                .GroupBy(item => CreateGroupKey(item.ProductId, item.Name, item.Unit))
+                .ToDictionary(
+                    group => group.Key,
+                    group => (
+                        IsPurchased: group.Any(item => item.IsPurchased),
+                        IsDismissed: group.Any(item => item.IsDismissed)));
+            var aggregates = new Dictionary<GroceryGroupKey, RecipeGroceryAggregate>();
+
+            foreach (var plannedMeal in plannedMeals)
+            {
+                foreach (var ingredient in plannedMeal.Recipe.Ingredients)
+                {
+                    var key = CreateGroupKey(ingredient.ProductId, ingredient.Name, ingredient.Unit);
+                    if (!aggregates.TryGetValue(key, out var aggregate))
+                    {
+                        aggregate = new RecipeGroceryAggregate(
+                            ingredient.ProductId,
+                            ingredient.Product?.Name ?? ingredient.Name.Trim(),
+                            ingredient.Unit.Trim(),
+                            0);
+                        aggregates.Add(key, aggregate);
+                    }
+
+                    aggregate.Quantity += ingredient.Quantity;
+                    aggregate.Sources.Add(new GroceryItemSource
+                    {
+                        PlannedMealId = plannedMeal.Id,
+                        RecipeIngredientId = ingredient.Id,
+                        Quantity = ingredient.Quantity,
+                        Unit = ingredient.Unit
+                    });
+                }
+            }
+
+            dbContext.GroceryListItems.RemoveRange(existingItems);
+            foreach (var (key, aggregate) in aggregates)
+            {
+                previousState.TryGetValue(key, out var state);
+                dbContext.GroceryListItems.Add(new GroceryListItem
+                {
+                    MealPlanId = mealPlan.Id,
+                    ProductId = aggregate.ProductId,
+                    CreatedAt = DateTime.UtcNow,
+                    Name = aggregate.Name,
+                    Quantity = aggregate.Quantity,
+                    Unit = aggregate.Unit,
+                    SourceType = RecipeItemSourceType,
+                    IsPurchased = state.IsPurchased,
+                    IsDismissed = state.IsDismissed,
+                    Sources = aggregate.Sources
+                });
+            }
+
+            await dbContext.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to sync grocery items from the current week's planned recipes.");
+            feedbackMessage = "Unable to update grocery items from your meal plan. Please try again.";
+            isValidationError = true;
+            return false;
+        }
+    }
+
+    private static GroceryGroupKey CreateGroupKey(int? productId, string name, string unit) =>
+        new(productId, productId is null ? name.Trim().ToUpperInvariant() : "", unit.Trim().ToUpperInvariant());
 
     private async Task<bool> LoadItemsAsync()
     {
         try
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-            items = await dbContext.StandaloneGroceryItems
+            var manualItems = await dbContext.StandaloneGroceryItems
                 .AsNoTracking()
                 .ToListAsync();
+            var loadedItems = manualItems
+                .Select(item => new GroceryListEntry(
+                    item.Id,
+                    false,
+                    item.Name,
+                    item.Quantity,
+                    item.Category,
+                    item.IsPurchased))
+                .ToList();
+
+            if (currentMealPlanId is int mealPlanId)
+            {
+                var recipeItems = await dbContext.GroceryListItems
+                    .AsNoTracking()
+                    .Include(item => item.Product)
+                    .Where(item => item.MealPlanId == mealPlanId
+                        && item.SourceType == RecipeItemSourceType
+                        && !item.IsDismissed)
+                    .ToListAsync();
+                loadedItems.AddRange(recipeItems.Select(item => new GroceryListEntry(
+                    item.Id,
+                    true,
+                    item.Name,
+                    FormatQuantity(item.Quantity, item.Unit),
+                    string.IsNullOrWhiteSpace(item.Product?.Category)
+                        ? "From recipes"
+                        : item.Product?.Category ?? "From recipes",
+                    item.IsPurchased)));
+            }
+
+            items = loadedItems;
             return true;
         }
         catch (Exception exception) when (exception is SqliteException or DbUpdateException)
         {
-            Logger.LogError(exception, "Failed to load standalone grocery items.");
+            Logger.LogError(exception, "Failed to load grocery items.");
             feedbackMessage = "Unable to load your grocery list. Please try again.";
             isValidationError = true;
             return false;
         }
+    }
+
+    private static string FormatQuantity(decimal quantity, string unit)
+    {
+        var amount = quantity.ToString("0.############################", CultureInfo.InvariantCulture);
+        return string.IsNullOrWhiteSpace(unit) ? amount : $"{amount} {unit}";
     }
 
     private async Task SaveItem()
@@ -313,8 +497,13 @@
         }
     }
 
-    private void BeginEdit(StandaloneGroceryItem item)
+    private void BeginEdit(GroceryListEntry item)
     {
+        if (item.IsRecipeGenerated)
+        {
+            return;
+        }
+
         editingItemId = item.Id;
         itemName = item.Name;
         itemQuantity = item.Quantity;
@@ -374,24 +563,49 @@
         }
     }
 
-    private async Task TogglePurchased(int id, bool isPurchased)
+    private async Task TogglePurchased(GroceryListEntry entry, bool isPurchased)
     {
         try
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-            var item = await dbContext.StandaloneGroceryItems
-                .FirstOrDefaultAsync(existing => existing.Id == id);
-            if (item is null)
+            string itemName;
+            if (entry.IsRecipeGenerated)
             {
-                feedbackMessage = "That item could not be found. Please try again.";
-                isValidationError = true;
-                return;
+                if (currentMealPlanId is not int mealPlanId)
+                {
+                    return;
+                }
+
+                var item = await dbContext.GroceryListItems.FirstOrDefaultAsync(existing =>
+                    existing.Id == entry.Id && existing.MealPlanId == mealPlanId);
+                if (item is null)
+                {
+                    feedbackMessage = "That item could not be found. Please try again.";
+                    isValidationError = true;
+                    return;
+                }
+
+                item.IsPurchased = isPurchased;
+                itemName = item.Name;
+            }
+            else
+            {
+                var item = await dbContext.StandaloneGroceryItems
+                    .FirstOrDefaultAsync(existing => existing.Id == entry.Id);
+                if (item is null)
+                {
+                    feedbackMessage = "That item could not be found. Please try again.";
+                    isValidationError = true;
+                    return;
+                }
+
+                item.IsPurchased = isPurchased;
+                itemName = item.Name;
             }
 
-            item.IsPurchased = isPurchased;
             var successMessage = isPurchased
-                ? $"{item.Name} marked as purchased."
-                : $"{item.Name} marked as not purchased.";
+                ? $"{itemName} marked as purchased."
+                : $"{itemName} marked as not purchased.";
             await dbContext.SaveChangesAsync();
 
             if (await LoadItemsAsync())
@@ -402,8 +616,45 @@
         }
         catch (Exception exception) when (exception is SqliteException or DbUpdateException)
         {
-            Logger.LogError(exception, "Failed to update purchase status for grocery item {GroceryItemId}.", id);
+            Logger.LogError(exception, "Failed to update purchase status for grocery item {GroceryItemId}.", entry.Id);
             feedbackMessage = "Unable to update the purchased status. Please try again.";
+            isValidationError = true;
+        }
+    }
+
+    private async Task DismissRecipeItem(int id)
+    {
+        if (currentMealPlanId is not int mealPlanId)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var item = await dbContext.GroceryListItems.FirstOrDefaultAsync(existing =>
+                existing.Id == id && existing.MealPlanId == mealPlanId
+                && existing.SourceType == RecipeItemSourceType);
+            if (item is null)
+            {
+                feedbackMessage = "That item could not be found. Please try again.";
+                isValidationError = true;
+                return;
+            }
+
+            item.IsDismissed = true;
+            await dbContext.SaveChangesAsync();
+
+            if (await LoadItemsAsync())
+            {
+                feedbackMessage = $"{item.Name} removed from this week's grocery list.";
+                isValidationError = false;
+            }
+        }
+        catch (Exception exception) when (exception is SqliteException or DbUpdateException)
+        {
+            Logger.LogError(exception, "Failed to dismiss recipe grocery item {GroceryItemId}.", id);
+            feedbackMessage = "Unable to remove the grocery item. Please try again.";
             isValidationError = true;
         }
     }
@@ -424,6 +675,18 @@
                 .ToListAsync();
             var purchasedIds = persistedPurchasedItems.Select(item => item.Id).ToArray();
             dbContext.StandaloneGroceryItems.RemoveRange(persistedPurchasedItems);
+            var purchasedRecipeItems = currentMealPlanId is int mealPlanId
+                ? await dbContext.GroceryListItems
+                    .Where(item => item.MealPlanId == mealPlanId
+                        && item.SourceType == RecipeItemSourceType
+                        && item.IsPurchased
+                        && !item.IsDismissed)
+                    .ToListAsync()
+                : new List<GroceryListItem>();
+            foreach (var item in purchasedRecipeItems)
+            {
+                item.IsDismissed = true;
+            }
             await dbContext.SaveChangesAsync();
 
             if (editingItemId is int editingId && purchasedIds.Contains(editingId))
@@ -433,13 +696,14 @@
 
             if (await LoadItemsAsync())
             {
-                feedbackMessage = $"{persistedPurchasedItems.Count.ToString(CultureInfo.InvariantCulture)} purchased item(s) cleared.";
+                var clearedCount = persistedPurchasedItems.Count + purchasedRecipeItems.Count;
+                feedbackMessage = $"{clearedCount.ToString(CultureInfo.InvariantCulture)} purchased item(s) cleared.";
                 isValidationError = false;
             }
         }
         catch (Exception exception) when (exception is SqliteException or DbUpdateException)
         {
-            Logger.LogError(exception, "Failed to clear purchased standalone grocery items.");
+            Logger.LogError(exception, "Failed to clear purchased grocery items.");
             feedbackMessage = "Unable to clear purchased items. Please try again.";
             isValidationError = true;
         }
@@ -458,4 +722,26 @@
         itemCategory = Categories[0];
     }
 
+    private readonly record struct GroceryGroupKey(int? ProductId, string Name, string Unit);
+
+    private sealed class RecipeGroceryAggregate(
+        int? productId,
+        string name,
+        string unit,
+        decimal quantity)
+    {
+        public int? ProductId { get; } = productId;
+        public string Name { get; } = name;
+        public string Unit { get; } = unit;
+        public decimal Quantity { get; set; } = quantity;
+        public List<GroceryItemSource> Sources { get; } = [];
+    }
+
+    private sealed record GroceryListEntry(
+        int Id,
+        bool IsRecipeGenerated,
+        string Name,
+        string Quantity,
+        string Category,
+        bool IsPurchased);
 }
