@@ -126,6 +126,9 @@ namespace MealCraft.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsDismissed")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsPurchased")
                         .HasColumnType("INTEGER");
 
@@ -477,6 +480,7 @@ namespace MealCraft.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
+
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
