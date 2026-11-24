@@ -1,0 +1,8 @@
+.blue-outline {
+  -webkit-text-stroke: 0.5px white;
+  text-shadow:
+    -2px -2px 0 var(--bs-primary),
+     2px -2px 0 var(--bs-primary),
+    -2px  2px 0 var(--bs-primary),
+     2px  2px 0 var(--bs-primary);
+}
