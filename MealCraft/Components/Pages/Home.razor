@@ -1,40 +1,261 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - MealCraft</PageTitle>
 
 @if (LoginSuccess)
 {
-    <div class="alert alert-success" role="status">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        Login successful!
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <i class="bi bi-hand-thumbs-up text-success" style="transform: scaleX(-1); display: inline-block; -webkit-text-stroke: 0.5px;"></i>
-        &nbsp;
-        <span class="text-success" style="text-decoration: underline; text-decoration-color: green; text-decoration-thickness: 3px; text-underline-offset: 6px;">
-        You now have access to MealCraft.</span>
-        &nbsp;
-        <i class="bi bi-hand-thumbs-up text-success" style="-webkit-text-stroke: 0.5px;"></i>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        Welcome!!!
+    <div class="alert alert-success text-center d-flex flex-column flex-xl-row justify-content-center align-items-center gap-2 gap-xl-4" role="status">
+
+        <div class="text-nowrap">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            Login successful!
+        </div>
+
+        <div class="d-flex align-items-center justify-content-center gap-2">
+
+            <i class="bi bi-hand-thumbs-up text-success"
+               style="transform: scaleX(-1); display: inline-block; -webkit-text-stroke: 0.5px;"></i>
+
+            <span class="text-success"
+                  style="text-decoration: underline; text-decoration-color: green; text-decoration-thickness: 3px; text-underline-offset: 6px;">
+                You now have access to MealCraft.
+            </span>
+
+            <i class="bi bi-hand-thumbs-up text-success"
+               style="-webkit-text-stroke: 0.5px;"></i>
+
+        </div>
+
+        <div class="text-nowrap">
+            Welcome!!!
+        </div>
+
     </div>
 }
 
 @if (LogoutSuccess)
 {
-    <div class="alert alert-success" role="status">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        Logout successful!
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <i class="bi bi-person-raised-hand text-success" style="font-size: 1.5rem;"></i>
-        <span class="text-success" style="text-decoration: underline; text-decoration-color: green; text-decoration-thickness: 3px; text-underline-offset: 6px;">
-        You have been logged out of MealCraft.</span>
-        <i class="bi bi-person-raised-hand text-success" style="font-size: 1.5rem;"></i>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        See you next time!
+    <div class="alert alert-success text-center d-flex flex-column flex-xl-row justify-content-center align-items-center gap-2 gap-xl-4" role="status">
+
+        <div class="text-nowrap">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            Logout successful!
+        </div>
+
+        <div class="d-flex align-items-center justify-content-center gap-2">
+
+            <i class="bi bi-person-raised-hand text-success"
+               style="font-size: 1.5rem;"></i>
+
+            <span class="text-success"
+                  style="text-decoration: underline; text-decoration-color: green; text-decoration-thickness: 3px; text-underline-offset: 6px;">
+                You have been logged out of MealCraft.
+            </span>
+
+            <i class="bi bi-person-raised-hand text-success"
+               style="font-size: 1.5rem;"></i>
+
+        </div>
+
+        <div class="text-nowrap">
+            See you next time!
+        </div>
+
     </div>
 }
 
-<h1>MealCraft - Meal Planning Simplified!</h1>
+<h1 class="blue-outline fw-bold text-center d-table mx-auto border-top border-bottom border-4 py-2 mb-4 mt-3">MealCraft - <span class="fst-italic">Meal Planning Simplified!</span></h1>
+
+<!-- Welcome Section -->
+<section class=" text-center bg-light border rounded-3 p-3 p-md-4 mb-4">
+
+    <h2 class="text-primary fw-bold mb-3">
+        Welcome to MealCraft!
+    </h2>
+
+    <p class="fs-5 mb-3">
+        Manage your recipes, track your regularly purchased products,
+        plan your weekly meals, and simplify the creation of your
+        grocery list — all in one place.
+    </p>
+
+    <AuthorizeView>
+        <Authorized>
+            <p class="mb-0">
+                Select one of the features below to get started.
+            </p>
+        </Authorized>
+
+        <NotAuthorized>
+            <p class="text-primary fw-bold mb-3">
+                Log in <span class="text-decoration-underline fw-normal">or</span> create an account to get started!
+            </p>
+
+            <div class="d-flex justify-content-center flex-wrap gap-2">
+
+                <a href="login" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-in-right me-2"
+                       aria-hidden="true"></i>
+                    Login
+                </a>
+
+                <a href="register" class="btn btn-outline-primary">
+                    <i class="bi bi-person-plus-fill me-2"
+                       aria-hidden="true"></i>
+                    Create Account
+                </a>
+
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+
+</section>
+
+<!-- Feature Navigation Section -->
+<section class="mb-4">
+
+    <h2 class="text-primary fw-bold text-center mb-4">
+        Explore MealCraft's Features
+    </h2>
+
+    <div class="row g-4">
+
+        <!-- Recipe Management Card -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column p-4">
+
+                    <i class="bi bi-journal-bookmark-fill text-primary display-4 mb-3"
+                       aria-hidden="true"></i>
+
+                    <h3 class="h4 text-primary fw-bold">
+                        Recipe Management
+                    </h3>
+
+                    <p class="mb-3">
+                        Create, edit, and organize your favorite
+                        recipes and their ingredients.
+                    </p>
+
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="mt-auto">
+                                <a href="recipes" class="btn btn-primary">
+                                    Manage Recipes
+                                    <i class="bi bi-arrow-right ms-2"
+                                       aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </Authorized>
+                    </AuthorizeView>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Card -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column p-4">
+
+                    <i class="bi bi-box-seam text-primary display-4 mb-3"
+                       aria-hidden="true"></i>
+
+                    <h3 class="h4 text-primary fw-bold">
+                        Products
+                    </h3>
+
+                    <p class="mb-3">
+                        Track and manage your regularly purchased
+                        products and ingredients.
+                    </p>
+
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="mt-auto">
+                                <a href="products" class="btn btn-primary">
+                                    Manage Products
+                                    <i class="bi bi-arrow-right ms-2"
+                                       aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </Authorized>
+                    </AuthorizeView>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Meal Planner Card -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column p-4">
+
+                    <i class="bi bi-calendar-week text-primary display-4 mb-3"
+                       aria-hidden="true"></i>
+
+                    <h3 class="h4 text-primary fw-bold">
+                        Weekly Meal Planner
+                    </h3>
+
+                    <p class="mb-3">
+                        Organize your breakfast, lunch, and
+                        dinner plans for the week.
+                    </p>
+
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="mt-auto">
+                                <a href="meal-planner" class="btn btn-primary">
+                                    Plan Meals
+                                    <i class="bi bi-arrow-right ms-2"
+                                       aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </Authorized>
+                    </AuthorizeView>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Grocery List Card -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column p-4">
+
+                    <i class="bi bi-list-check text-primary display-4 mb-3"
+                       aria-hidden="true"></i>
+
+                    <h3 class="h4 text-primary fw-bold">
+                        Grocery List
+                    </h3>
+
+                    <p class="mb-3">
+                        Create, organize, and manage your
+                        grocery shopping list.
+                    </p>
+
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="mt-auto">
+                                <a href="grocery-list" class="btn btn-primary">
+                                    Review Grocery List
+                                    <i class="bi bi-arrow-right ms-2"
+                                       aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </Authorized>
+                    </AuthorizeView>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</section>
 
 @code {
     [SupplyParameterFromQuery(Name = "loginSuccess")]
