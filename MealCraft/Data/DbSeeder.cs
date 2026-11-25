@@ -86,13 +86,16 @@ public static class DbSeeder
         foreach (var details in productDetails)
         {
             var product = await context.Products
-                .FirstOrDefaultAsync(candidate => candidate.Name == details.Name, cancellationToken);
+                .FirstOrDefaultAsync(
+                    candidate => candidate.UserId == user.Id && candidate.Name == details.Name,
+                    cancellationToken);
 
             if (product is null)
             {
                 product = new Product
                 {
                     Name = details.Name,
+                    UserId = user.Id,
                     DefaultUnit = details.Unit,
                     Category = details.Category
                 };

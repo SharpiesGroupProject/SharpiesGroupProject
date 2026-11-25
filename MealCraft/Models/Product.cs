@@ -15,6 +15,9 @@ public class Product
     [StringLength(50)]
     public string? Category { get; set; }
 
+    public string UserId { get; set; } = string.Empty;
+    public ApplicationUser User { get; set; } = null!;
+
     public List<Ingredient> RecipeIngredients { get; set; } = new();
     public List<GroceryListItem> GroceryListItems { get; set; } = new();
 }
