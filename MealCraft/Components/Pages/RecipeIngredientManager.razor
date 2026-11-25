@@ -136,6 +136,7 @@
             .ToListAsync();
         products = await db.Products
             .AsNoTracking()
+            .Where(product => db.Recipes.Any(recipe => recipe.Id == RecipeId && recipe.UserId == product.UserId))
             .OrderBy(product => product.Name)
             .ToListAsync();
     }
@@ -255,12 +256,16 @@
         }
     }
 
-    // Ingredients point at a shared catalog Product; reuse it by name or create it on demand.
-    private static async Task<Product> ResolveProductAsync(MealCraftDbContext db, IngredientDraft input)
+    // Ingredients point at a Product from the recipe owner's catalog; reuse it by name or create it on demand.
+    private async Task<Product> ResolveProductAsync(MealCraftDbContext db, IngredientDraft input)
     {
+        var ownerId = await db.Recipes
+            .Where(recipe => recipe.Id == RecipeId)
+            .Select(recipe => recipe.UserId)
+            .SingleAsync();
         var name = input.Name.Trim();
         var existing = await db.Products
-            .FirstOrDefaultAsync(product => product.Name.ToLower() == name.ToLower());
+            .FirstOrDefaultAsync(product => product.UserId == ownerId && product.Name.ToLower() == name.ToLower());
         if (existing is not null)
         {
             return existing;
@@ -269,6 +274,7 @@
         var created = new Product
         {
             Name = name,
+            UserId = ownerId,
             DefaultUnit = string.IsNullOrWhiteSpace(input.Unit) ? null : input.Unit.Trim()
         };
         db.Products.Add(created);

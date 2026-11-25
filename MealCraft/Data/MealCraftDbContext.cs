@@ -42,6 +42,12 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .HasForeignKey(tag => tag.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Product>()
+            .HasOne(product => product.User)
+            .WithMany(user => user.Products)
+            .HasForeignKey(product => product.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<Ingredient>()
             .HasOne(ingredient => ingredient.Recipe)
             .WithMany(recipe => recipe.Ingredients)
