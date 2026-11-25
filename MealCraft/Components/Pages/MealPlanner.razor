@@ -192,6 +192,12 @@
             return;
         }
 
+        if (!availableRecipes.Any(r => r.Id == recipeId))
+        {
+            errorMessage = "That recipe is not available to assign.";
+            return;
+        }
+
         try
         {
             await using var db = DbFactory.CreateDbContext();
