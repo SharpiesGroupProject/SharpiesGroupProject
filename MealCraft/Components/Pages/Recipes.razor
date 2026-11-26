@@ -758,12 +758,6 @@
 
         var recipeId = selectedRecipe.Id;
         await using var db = DbFactory.CreateDbContext();
-        if (await db.PlannedMeals.AnyAsync(meal => meal.RecipeId == recipeId))
-        {
-            deleteError = "This recipe is used in a meal plan and cannot be deleted until it is removed from the plan.";
-            return;
-        }
-
         var recipe = await db.Recipes
             .Include(candidate => candidate.Ingredients)
             .Include(candidate => candidate.RecipeTags)
@@ -771,6 +765,12 @@
         if (recipe is null)
         {
             deleteError = "This recipe could not be found in the database. Reload the page and try again.";
+            return;
+        }
+
+        if (await db.PlannedMeals.AnyAsync(meal => meal.RecipeId == recipeId))
+        {
+            deleteError = "This recipe is used in a meal plan and cannot be deleted until it is removed from the plan.";
             return;
         }
 
