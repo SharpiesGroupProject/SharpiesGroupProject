@@ -3,6 +3,7 @@ namespace MealCraft.Models;
 public class GroceryListItem
 {
     public int Id { get; set; }
+    public string OwnerUserId { get; set; } = string.Empty;
     public int MealPlanId { get; set; }
     public int? ProductId { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -14,6 +15,7 @@ public class GroceryListItem
     public bool IsDismissed { get; set; }
 
     public MealPlan MealPlan { get; set; } = null!;
+    public ApplicationUser Owner { get; set; } = null!;
     public Product? Product { get; set; }
     public List<GroceryItemSource> Sources { get; set; } = new();
 }

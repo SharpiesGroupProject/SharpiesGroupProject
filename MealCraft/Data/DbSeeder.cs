@@ -226,7 +226,8 @@ public static class DbSeeder
             var groceryItem = await context.GroceryListItems
                 .Include(item => item.Sources)
                 .FirstOrDefaultAsync(
-                    item => item.MealPlanId == mealPlan.Id
+                    item => item.OwnerUserId == user.Id
+                        && item.MealPlanId == mealPlan.Id
                         && item.Name == ingredient.Name
                         && item.Unit == ingredient.Unit
                         && item.ProductId == ingredient.ProductId,
@@ -236,6 +237,7 @@ public static class DbSeeder
             {
                 groceryItem = new GroceryListItem
                 {
+                    OwnerUserId = user.Id,
                     MealPlanId = mealPlan.Id,
                     ProductId = ingredient.ProductId,
                     CreatedAt = DateTime.UtcNow,

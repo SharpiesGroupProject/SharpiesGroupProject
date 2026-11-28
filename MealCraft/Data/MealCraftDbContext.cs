@@ -84,11 +84,24 @@ public class MealCraftDbContext(DbContextOptions<MealCraftDbContext> options) : 
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<GroceryListItem>()
+            .HasOne(item => item.Owner)
+            .WithMany(user => user.GroceryListItems)
+            .HasForeignKey(item => item.OwnerUserId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<GroceryListItem>()
             .HasOne(item => item.Product)
             .WithMany(product => product.GroceryListItems)
             .HasForeignKey(item => item.ProductId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<StandaloneGroceryItem>()
+            .HasOne(item => item.Owner)
+            .WithMany(user => user.StandaloneGroceryItems)
+            .HasForeignKey(item => item.OwnerUserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<GroceryItemSource>()
             .HasOne(source => source.GroceryListItem)

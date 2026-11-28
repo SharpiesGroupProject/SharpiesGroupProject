@@ -251,8 +251,28 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!TryGetOwnerId(out _))
+        {
+            return;
+        }
+
         await SyncRecipeItemsAsync();
         await LoadItemsAsync();
+    }
+
+    private bool TryGetOwnerId(out string ownerId)
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            ownerId = userId;
+            return true;
+        }
+
+        ownerId = string.Empty;
+        Logger.LogError("Unable to access the grocery list because the authenticated user ID is missing.");
+        feedbackMessage = "Unable to identify your account. Please sign in again.";
+        isValidationError = true;
+        return false;
     }
 
     private static DateOnly CurrentWeekStart
@@ -267,9 +287,9 @@
     private async Task<bool> SyncRecipeItemsAsync()
     {
         currentMealPlanId = null;
-        if (userId is null)
+        if (!TryGetOwnerId(out var ownerId))
         {
-            return true;
+            return false;
         }
 
         try
@@ -281,9 +301,9 @@
             var mealPlanWeekStart = weekStart.AddDays(1).ToDateTime(TimeOnly.MinValue);
 
             var mealPlan = await dbContext.MealPlans
-                .FirstOrDefaultAsync(plan => plan.UserId == userId && plan.WeekStartDate == mealPlanWeekStart);
+                .FirstOrDefaultAsync(plan => plan.UserId == ownerId && plan.WeekStartDate == mealPlanWeekStart);
             var plannedMeals = await dbContext.PlannedMeals
-                .Where(meal => meal.MealPlan.UserId == userId
+                .Where(meal => meal.MealPlan.UserId == ownerId
                     && meal.MealDate >= rangeStart && meal.MealDate < rangeEnd)
                 .Include(meal => meal.Recipe)
                     .ThenInclude(recipe => recipe.Ingredients)
@@ -299,7 +319,7 @@
             {
                 mealPlan = new MealPlan
                 {
-                    UserId = userId,
+                    UserId = ownerId,
                     WeekStartDate = mealPlanWeekStart,
                     IsActive = true
                 };
@@ -310,7 +330,9 @@
             currentMealPlanId = mealPlan.Id;
             var existingItems = await dbContext.GroceryListItems
                 .Include(item => item.Sources)
-                .Where(item => item.MealPlanId == mealPlan.Id && item.SourceType == RecipeItemSourceType)
+                .Where(item => item.OwnerUserId == ownerId
+                    && item.MealPlanId == mealPlan.Id
+                    && item.SourceType == RecipeItemSourceType)
                 .ToListAsync();
             var previousState = existingItems
                 .GroupBy(item => CreateGroupKey(item.ProductId, item.Name, item.Unit))
@@ -353,6 +375,7 @@
                 previousState.TryGetValue(key, out var state);
                 dbContext.GroceryListItems.Add(new GroceryListItem
                 {
+                    OwnerUserId = ownerId,
                     MealPlanId = mealPlan.Id,
                     ProductId = aggregate.ProductId,
                     CreatedAt = DateTime.UtcNow,
@@ -383,11 +406,17 @@
 
     private async Task<bool> LoadItemsAsync()
     {
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return false;
+        }
+
         try
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
             var manualItems = await dbContext.StandaloneGroceryItems
                 .AsNoTracking()
+                .Where(item => item.OwnerUserId == ownerId)
                 .ToListAsync();
             var loadedItems = manualItems
                 .Select(item => new GroceryListEntry(
@@ -404,7 +433,8 @@
                 var recipeItems = await dbContext.GroceryListItems
                     .AsNoTracking()
                     .Include(item => item.Product)
-                    .Where(item => item.MealPlanId == mealPlanId
+                    .Where(item => item.OwnerUserId == ownerId
+                        && item.MealPlanId == mealPlanId
                         && item.SourceType == RecipeItemSourceType
                         && !item.IsDismissed)
                     .ToListAsync();
@@ -439,6 +469,11 @@
 
     private async Task SaveItem()
     {
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return;
+        }
+
         var trimmedName = itemName.Trim();
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
@@ -455,7 +490,7 @@
             if (editingItemId is int id)
             {
                 var item = await dbContext.StandaloneGroceryItems
-                    .FirstOrDefaultAsync(existing => existing.Id == id);
+                    .FirstOrDefaultAsync(existing => existing.Id == id && existing.OwnerUserId == ownerId);
                 if (item is null)
                 {
                     ResetForm();
@@ -473,6 +508,7 @@
             {
                 dbContext.StandaloneGroceryItems.Add(new StandaloneGroceryItem
                 {
+                    OwnerUserId = ownerId,
                     Name = trimmedName,
                     Quantity = itemQuantity.Trim(),
                     Category = itemCategory
@@ -528,11 +564,16 @@
 
     private async Task DeleteItem(int id)
     {
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return;
+        }
+
         try
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
             var item = await dbContext.StandaloneGroceryItems
-                .FirstOrDefaultAsync(existing => existing.Id == id);
+                .FirstOrDefaultAsync(existing => existing.Id == id && existing.OwnerUserId == ownerId);
             if (item is null)
             {
                 feedbackMessage = "That item could not be found. Please try again.";
@@ -565,6 +606,11 @@
 
     private async Task TogglePurchased(GroceryListEntry entry, bool isPurchased)
     {
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return;
+        }
+
         try
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
@@ -577,7 +623,9 @@
                 }
 
                 var item = await dbContext.GroceryListItems.FirstOrDefaultAsync(existing =>
-                    existing.Id == entry.Id && existing.MealPlanId == mealPlanId);
+                    existing.Id == entry.Id
+                    && existing.OwnerUserId == ownerId
+                    && existing.MealPlanId == mealPlanId);
                 if (item is null)
                 {
                     feedbackMessage = "That item could not be found. Please try again.";
@@ -591,7 +639,7 @@
             else
             {
                 var item = await dbContext.StandaloneGroceryItems
-                    .FirstOrDefaultAsync(existing => existing.Id == entry.Id);
+                    .FirstOrDefaultAsync(existing => existing.Id == entry.Id && existing.OwnerUserId == ownerId);
                 if (item is null)
                 {
                     feedbackMessage = "That item could not be found. Please try again.";
@@ -624,6 +672,11 @@
 
     private async Task DismissRecipeItem(int id)
     {
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return;
+        }
+
         if (currentMealPlanId is not int mealPlanId)
         {
             return;
@@ -634,6 +687,7 @@
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
             var item = await dbContext.GroceryListItems.FirstOrDefaultAsync(existing =>
                 existing.Id == id && existing.MealPlanId == mealPlanId
+                && existing.OwnerUserId == ownerId
                 && existing.SourceType == RecipeItemSourceType);
             if (item is null)
             {
@@ -661,6 +715,11 @@
 
     private async Task ClearPurchased()
     {
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return;
+        }
+
         var purchasedItems = items.Where(item => item.IsPurchased).ToList();
         if (purchasedItems.Count == 0)
         {
@@ -671,13 +730,14 @@
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
             var persistedPurchasedItems = await dbContext.StandaloneGroceryItems
-                .Where(item => item.IsPurchased)
+                .Where(item => item.OwnerUserId == ownerId && item.IsPurchased)
                 .ToListAsync();
             var purchasedIds = persistedPurchasedItems.Select(item => item.Id).ToArray();
             dbContext.StandaloneGroceryItems.RemoveRange(persistedPurchasedItems);
             var purchasedRecipeItems = currentMealPlanId is int mealPlanId
                 ? await dbContext.GroceryListItems
                     .Where(item => item.MealPlanId == mealPlanId
+                        && item.OwnerUserId == ownerId
                         && item.SourceType == RecipeItemSourceType
                         && item.IsPurchased
                         && !item.IsDismissed)
