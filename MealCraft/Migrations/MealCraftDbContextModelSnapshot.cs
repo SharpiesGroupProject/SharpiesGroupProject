@@ -139,6 +139,10 @@ namespace MealCraft.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerUserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("ProductId")
                         .HasColumnType("INTEGER");
 
@@ -156,6 +160,8 @@ namespace MealCraft.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MealPlanId");
+
+                    b.HasIndex("OwnerUserId");
 
                     b.HasIndex("ProductId");
 
@@ -352,12 +358,17 @@ namespace MealCraft.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerUserId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Quantity")
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
 
                     b.ToTable("StandaloneGroceryItems");
                 });
@@ -523,12 +534,20 @@ namespace MealCraft.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MealCraft.Models.ApplicationUser", "Owner")
+                        .WithMany("GroceryListItems")
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("MealCraft.Models.Product", "Product")
                         .WithMany("GroceryListItems")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("MealPlan");
+
+                    b.Navigation("Owner");
 
                     b.Navigation("Product");
                 });
@@ -615,6 +634,16 @@ namespace MealCraft.Migrations
                     b.Navigation("Recipe");
                 });
 
+            modelBuilder.Entity("MealCraft.Models.StandaloneGroceryItem", b =>
+                {
+                    b.HasOne("MealCraft.Models.ApplicationUser", "Owner")
+                        .WithMany("StandaloneGroceryItems")
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -668,11 +697,15 @@ namespace MealCraft.Migrations
 
             modelBuilder.Entity("MealCraft.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("GroceryListItems");
+
                     b.Navigation("MealPlans");
 
                     b.Navigation("Products");
 
                     b.Navigation("Recipes");
+
+                    b.Navigation("StandaloneGroceryItems");
                 });
 
             modelBuilder.Entity("MealCraft.Models.GroceryListItem", b =>
