@@ -4,7 +4,10 @@
 @using MealCraft.Data
 @using MealCraft.Models
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject MealCraftDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Products - MealCraft</PageTitle>
 
@@ -76,25 +79,40 @@ else{
     private List<Product>? products;
     private Product newProduct = new();
     private string? feedbackMessage;
+    private string? userId;
 
     protected override async Task OnInitializedAsync()
     {
-        products = await DbContext.Products
-            .AsNoTracking()
-            .OrderBy(product => product.Name)
-            .ToListAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await LoadProductsAsync();
     }
 
     private async Task AddProduct()
     {
+        if (userId is null)
+        {
+            return;
+        }
+
+        newProduct.UserId = userId;
         DbContext.Products.Add(newProduct);
         await DbContext.SaveChangesAsync();
 
         feedbackMessage = $"{newProduct.Name} added.";
         newProduct = new Product();
-        products = await DbContext.Products
-            .AsNoTracking()
-            .OrderBy(product => product.Name)
-            .ToListAsync();
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        products = userId is null
+            ? []
+            : await DbContext.Products
+                .AsNoTracking()
+                .Where(product => product.UserId == userId)
+                .OrderBy(product => product.Name)
+                .ToListAsync();
     }
 }

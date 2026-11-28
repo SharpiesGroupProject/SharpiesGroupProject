@@ -274,7 +274,13 @@ namespace MealCraft.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Products");
                 });
@@ -595,6 +601,17 @@ namespace MealCraft.Migrations
                     b.Navigation("Recipe");
                 });
 
+            modelBuilder.Entity("MealCraft.Models.Product", b =>
+                {
+                    b.HasOne("MealCraft.Models.ApplicationUser", "User")
+                        .WithMany("Products")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MealCraft.Models.Recipe", b =>
                 {
                     b.HasOne("MealCraft.Models.ApplicationUser", "User")
@@ -683,6 +700,8 @@ namespace MealCraft.Migrations
                     b.Navigation("GroceryListItems");
 
                     b.Navigation("MealPlans");
+
+                    b.Navigation("Products");
 
                     b.Navigation("Recipes");
 
